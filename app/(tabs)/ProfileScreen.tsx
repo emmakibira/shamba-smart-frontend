@@ -1,20 +1,33 @@
 // src/screens/ProfileScreen.tsx
-import React, { useState } from 'react';
+import { LinearGradient } from "expo-linear-gradient";
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Image,
-  Switch,
-  Alert,
-  Animated,
-} from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { User, Settings, Bell, Shield, Leaf, CreditCard, HelpCircle, LogOut, ChevronRight, Award, TrendingUp, Users, Calendar } from 'lucide-react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSubscription } from '../contexts/SubscriptionContext';
+    Award,
+    Bell,
+    Calendar,
+    ChevronRight,
+    CreditCard,
+    HelpCircle,
+    Leaf,
+    LogOut,
+    Settings,
+    Shield,
+    TrendingUp,
+    User,
+    Users,
+} from "lucide-react-native";
+import React, { useState } from "react";
+import {
+    Alert,
+    Animated,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TouchableOpacity,
+    View
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useSubscription } from "../contexts/SubscriptionContext";
 
 interface MenuItem {
   id: string;
@@ -26,7 +39,8 @@ interface MenuItem {
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
-  const { isPremium, upgradeToPremium, communityPostsThisMonth } = useSubscription();
+  const { isPremium, upgradeToPremium, communityPostsThisMonth } =
+    useSubscription();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
@@ -41,61 +55,69 @@ export default function ProfileScreen() {
   }, []);
 
   const handleLogout = () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Logout', style: 'destructive', onPress: () => console.log('Logout') },
-      ]
-    );
+    Alert.alert("Logout", "Are you sure you want to logout?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Logout",
+        style: "destructive",
+        onPress: () => console.log("Logout"),
+      },
+    ]);
   };
 
   const menuItems: MenuItem[] = [
     {
-      id: 'account',
-      title: 'Account Settings',
+      id: "account",
+      title: "Account Settings",
       icon: User,
-      onPress: () => console.log('Account Settings'),
+      onPress: () => console.log("Account Settings"),
     },
     {
-      id: 'notifications',
-      title: 'Notifications',
+      id: "notifications",
+      title: "Notifications",
       icon: Bell,
-      onPress: () => console.log('Notifications'),
+      onPress: () => console.log("Notifications"),
     },
     {
-      id: 'privacy',
-      title: 'Privacy & Security',
+      id: "privacy",
+      title: "Privacy & Security",
       icon: Shield,
-      onPress: () => console.log('Privacy'),
+      onPress: () => console.log("Privacy"),
     },
     {
-      id: 'subscription',
-      title: 'Subscription',
+      id: "subscription",
+      title: "Subscription",
       icon: CreditCard,
-      badge: isPremium ? 'Premium' : 'Free',
+      badge: isPremium ? "Premium" : "Free",
       onPress: () => !isPremium && upgradeToPremium(),
     },
     {
-      id: 'help',
-      title: 'Help & Support',
+      id: "help",
+      title: "Help & Support",
       icon: HelpCircle,
-      onPress: () => console.log('Help'),
+      onPress: () => console.log("Help"),
     },
   ];
 
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}
+      >
         <Animated.View style={{ opacity: fadeAnim }}>
           {/* Header */}
-          <LinearGradient colors={['#0F3D1E', '#2E7D32']} style={[styles.header, { paddingTop: insets.top + 20 }]}>
+          <LinearGradient
+            colors={["#0F3D1E", "#2E7D32"]}
+            style={[styles.header, { paddingTop: insets.top + 20 }]}
+          >
             <View style={styles.profileInfo}>
-              <Image
-                source={require('../../assets/profile-avatar.png')}
-                style={styles.avatar}
-              />
+              <LinearGradient
+                colors={["#FFB74D", "#FFA726"]}
+                style={styles.avatarContainer}
+              >
+                <User size={48} color="#fff" />
+              </LinearGradient>
               <Text style={styles.userName}>Farmer John</Text>
               <Text style={styles.userEmail}>john.farmer@example.com</Text>
               <View style={styles.locationBadge}>
@@ -131,7 +153,7 @@ export default function ProfileScreen() {
           {/* Subscription Banner */}
           {!isPremium && (
             <LinearGradient
-              colors={['#FFD54F', '#FFC107']}
+              colors={["#FFD54F", "#FFC107"]}
               style={styles.premiumBanner}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
@@ -140,9 +162,14 @@ export default function ProfileScreen() {
                 <Leaf size={32} color="#fff" />
                 <View style={styles.premiumTextContainer}>
                   <Text style={styles.premiumTitle}>Go Premium</Text>
-                  <Text style={styles.premiumDescription}>Unlock unlimited posts and expert features</Text>
+                  <Text style={styles.premiumDescription}>
+                    Unlock unlimited posts and expert features
+                  </Text>
                 </View>
-                <TouchableOpacity style={styles.upgradeButton} onPress={upgradeToPremium}>
+                <TouchableOpacity
+                  style={styles.upgradeButton}
+                  onPress={upgradeToPremium}
+                >
                   <Text style={styles.upgradeButtonText}>Upgrade</Text>
                 </TouchableOpacity>
               </View>
@@ -156,15 +183,17 @@ export default function ProfileScreen() {
               <View style={styles.postLimitHeader}>
                 <Text style={styles.postLimitLabel}>Monthly Posts</Text>
                 <Text style={styles.postLimitValue}>
-                  {communityPostsThisMonth} / {isPremium ? '∞' : '5'}
+                  {communityPostsThisMonth} / {isPremium ? "∞" : "5"}
                 </Text>
               </View>
               <View style={styles.progressBar}>
-                <View 
+                <View
                   style={[
-                    styles.progressFill, 
-                    { width: `${Math.min((communityPostsThisMonth / 5) * 100, 100)}%` }
-                  ]} 
+                    styles.progressFill,
+                    {
+                      width: `${Math.min((communityPostsThisMonth / 5) * 100, 100)}%`,
+                    },
+                  ]}
                 />
               </View>
             </View>
@@ -186,8 +215,18 @@ export default function ProfileScreen() {
                 </View>
                 <View style={styles.menuRight}>
                   {item.badge && (
-                    <View style={[styles.badge, item.badge === 'Premium' && styles.premiumBadge]}>
-                      <Text style={[styles.badgeText, item.badge === 'Premium' && styles.premiumBadgeText]}>
+                    <View
+                      style={[
+                        styles.badge,
+                        item.badge === "Premium" && styles.premiumBadge,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.badgeText,
+                          item.badge === "Premium" && styles.premiumBadgeText,
+                        ]}
+                      >
                         {item.badge}
                       </Text>
                     </View>
@@ -206,7 +245,7 @@ export default function ProfileScreen() {
               <Switch
                 value={notificationsEnabled}
                 onValueChange={setNotificationsEnabled}
-                trackColor={{ false: '#ddd', true: '#2E7D32' }}
+                trackColor={{ false: "#ddd", true: "#2E7D32" }}
               />
             </View>
 
@@ -218,14 +257,19 @@ export default function ProfileScreen() {
               <Switch
                 value={darkMode}
                 onValueChange={setDarkMode}
-                trackColor={{ false: '#ddd', true: '#2E7D32' }}
+                trackColor={{ false: "#ddd", true: "#2E7D32" }}
               />
             </View>
 
-            <TouchableOpacity style={[styles.menuItem, styles.logoutItem]} onPress={handleLogout}>
+            <TouchableOpacity
+              style={[styles.menuItem, styles.logoutItem]}
+              onPress={handleLogout}
+            >
               <View style={styles.menuLeft}>
                 <LogOut size={22} color="#FF5252" />
-                <Text style={[styles.menuTitle, styles.logoutText]}>Logout</Text>
+                <Text style={[styles.menuTitle, styles.logoutText]}>
+                  Logout
+                </Text>
               </View>
             </TouchableOpacity>
           </View>
@@ -241,7 +285,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: "#f5f5f5",
   },
   header: {
     paddingHorizontal: 20,
@@ -250,52 +294,62 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 30,
   },
   profileInfo: {
-    alignItems: 'center',
+    alignItems: "center",
   },
   avatar: {
     width: 100,
     height: 100,
     borderRadius: 50,
     borderWidth: 3,
-    borderColor: '#fff',
+    borderColor: "#fff",
     marginBottom: 12,
+  },
+  avatarContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 3,
+    borderColor: "#fff",
+    marginBottom: 12,
+    justifyContent: "center",
+    alignItems: "center",
   },
   userName: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
+    fontWeight: "bold",
+    color: "#fff",
     marginBottom: 4,
   },
   userEmail: {
     fontSize: 14,
-    color: 'rgba(255,255,255,0.8)',
+    color: "rgba(255,255,255,0.8)",
     marginBottom: 8,
   },
   locationBadge: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: "rgba(255,255,255,0.2)",
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12,
   },
   locationText: {
     fontSize: 12,
-    color: '#fff',
+    color: "#fff",
   },
   statsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     paddingHorizontal: 16,
     marginTop: -20,
     gap: 12,
   },
   statCard: {
     flex: 1,
-    minWidth: '45%',
-    backgroundColor: '#fff',
+    minWidth: "45%",
+    backgroundColor: "#fff",
     borderRadius: 16,
     padding: 16,
-    alignItems: 'center',
-    shadowColor: '#000',
+    alignItems: "center",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
@@ -303,13 +357,13 @@ const styles = StyleSheet.create({
   },
   statNumber: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
     marginTop: 8,
   },
   statLabel: {
     fontSize: 12,
-    color: '#999',
+    color: "#999",
     marginTop: 4,
   },
   premiumBanner: {
@@ -319,8 +373,8 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   premiumContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
   },
   premiumTextContainer: {
@@ -328,27 +382,27 @@ const styles = StyleSheet.create({
   },
   premiumTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#fff',
+    fontWeight: "bold",
+    color: "#fff",
   },
   premiumDescription: {
     fontSize: 12,
-    color: 'rgba(255,255,255,0.9)',
+    color: "rgba(255,255,255,0.9)",
     marginTop: 2,
   },
   upgradeButton: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
   },
   upgradeButtonText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#F57C00',
+    fontWeight: "600",
+    color: "#F57C00",
   },
   communityStatsCard: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     marginHorizontal: 16,
     marginTop: 16,
     borderRadius: 16,
@@ -356,39 +410,39 @@ const styles = StyleSheet.create({
   },
   communityStatsTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
+    fontWeight: "600",
+    color: "#333",
     marginBottom: 12,
   },
   postLimitBar: {
     gap: 8,
   },
   postLimitHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   postLimitLabel: {
     fontSize: 14,
-    color: '#666',
+    color: "#666",
   },
   postLimitValue: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#2E7D32',
+    fontWeight: "500",
+    color: "#2E7D32",
   },
   progressBar: {
     height: 8,
-    backgroundColor: '#E8F5E9',
+    backgroundColor: "#E8F5E9",
     borderRadius: 4,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   progressFill: {
-    height: '100%',
-    backgroundColor: '#2E7D32',
+    height: "100%",
+    backgroundColor: "#2E7D32",
     borderRadius: 4,
   },
   menuSection: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     marginHorizontal: 16,
     marginTop: 16,
     borderRadius: 16,
@@ -396,62 +450,62 @@ const styles = StyleSheet.create({
   },
   menuSectionTitle: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#999',
+    fontWeight: "600",
+    color: "#999",
     marginHorizontal: 16,
     marginTop: 8,
     marginBottom: 8,
   },
   menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 14,
   },
   menuLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
   },
   menuTitle: {
     fontSize: 16,
-    color: '#333',
+    color: "#333",
   },
   menuRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
   badge: {
-    backgroundColor: '#f5f5f5',
+    backgroundColor: "#f5f5f5",
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
   },
   premiumBadge: {
-    backgroundColor: '#FFD54F',
+    backgroundColor: "#FFD54F",
   },
   badgeText: {
     fontSize: 12,
-    color: '#666',
+    color: "#666",
   },
   premiumBadgeText: {
-    color: '#333',
-    fontWeight: '600',
+    color: "#333",
+    fontWeight: "600",
   },
   logoutItem: {
     borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
+    borderTopColor: "#f0f0f0",
     marginTop: 8,
   },
   logoutText: {
-    color: '#FF5252',
+    color: "#FF5252",
   },
   versionText: {
-    textAlign: 'center',
+    textAlign: "center",
     fontSize: 12,
-    color: '#999',
+    color: "#999",
     marginTop: 20,
     marginBottom: 10,
   },
