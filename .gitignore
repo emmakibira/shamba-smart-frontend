@@ -1,7 +1,5 @@
 # Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
 
-# dependencies
-node_modules/
 
 # Expo
 .expo/
@@ -31,7 +29,15 @@ yarn-error.*
 *.pem
 
 # local env files
+.env
 .env*.local
+
+# Python virtual environment
+.venv/
+
+# Backend database
+backend/db.sqlite3
+backend/db.sqlite3-journal
 
 # typescript
 *.tsbuildinfo
