@@ -1,0 +1,18 @@
+app/(drawer)/DashboardScreen.tsx(148,41): error TS2339: Property 'getDashboardOverview' does not exist on type 'ApiService'.
+app/(drawer)/_layout.tsx(57,37): error TS2322: Type '"people.fill"' is not assignable to type 'SFSymbols7_0'.
+app/(drawer)/_layout.tsx(66,37): error TS2322: Type '"shopping.bag.fill"' is not assignable to type 'SFSymbols7_0'.
+app/+not-found.tsx(56,40): error TS2345: Argument of type '"/(tabs)/DashboardScreen"' is not assignable to parameter of type 'RelativePathString | ExternalPathString | "/AdminDashboard" | `/AdminDashboard?${string}` | `/AdminDashboard#${string}` | "/LoginScreen" | `/LoginScreen?${string}` | `/LoginScreen#${string}` | "/OnboardingScreen" | ... 57 more ... | { ...; }'.
+app/LoginScreen.tsx(3,44): error TS2307: Cannot find module 'firebase/auth' or its corresponding type declarations.
+app/OnboardingScreen.tsx(52,23): error TS2304: Cannot find name 'NativeStackNavigationProp'.
+app/RegistrationScreen.tsx(17,37): error TS2307: Cannot find module '@react-navigation/stack' or its corresponding type declarations.
+app/RegistrationScreen.tsx(23,48): error TS2307: Cannot find module 'firebase/auth' or its corresponding type declarations.
+app/RegistrationScreen.tsx(24,29): error TS2307: Cannot find module 'firebase/firestore' or its corresponding type declarations.
+app/_layout.tsx(39,32): error TS2367: This comparison appears to be unintentional because the types '"AdminDashboard" | "LoginScreen" | "OnboardingScreen" | "RegistrationScreen" | "SmsScreen" | "_sitemap" | "AdvisoryScreen" | "CommunityScreen" | "DashboardScreen" | "MarketScreen" | "ProfileScreen" | "+not-found"' and '"modal"' have no overlap.
+components/ui/icon-symbol.tsx(19,17): error TS2352: Conversion of type '{ "house.fill": "home"; "paperplane.fill": "send"; "chevron.left.forwardslash.chevron.right": "code"; "chevron.right": "chevron-right"; "person.fill": "person"; "lightbulb.fill": "lightbulb"; "people.fill": string; ... 18 more ...; "location.fill": "location-on"; }' to type 'IconMapping' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type '{ "house.fill": "home"; "paperplane.fill": "send"; "chevron.left.forwardslash.chevron.right": "code"; "chevron.right": "chevron-right"; "person.fill": "person"; "lightbulb.fill": "lightbulb"; "people.fill": string; ... 18 more ...; "location.fill": "location-on"; }' is missing the following properties from type 'IconMapping': number, function, link, message, and 9127 more.
+contexts/AuthContext.tsx(9,51): error TS2307: Cannot find module 'firebase/auth' or its corresponding type declarations.
+contexts/AuthContext.tsx(38,51): error TS7006: Parameter 'firebaseUser' implicitly has an 'any' type.
+services/firebase.ts(1,48): error TS2307: Cannot find module 'firebase/app' or its corresponding type declarations.
+services/firebase.ts(2,25): error TS2307: Cannot find module 'firebase/auth' or its corresponding type declarations.
+services/firebase.ts(3,30): error TS2307: Cannot find module 'firebase/firestore' or its corresponding type declarations.
+services/location.ts(101,7): error TS2741: Property 'remove' is missing in type 'Promise<LocationSubscription>' but required in type 'LocationSubscription'.

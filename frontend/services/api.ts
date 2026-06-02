@@ -2,8 +2,10 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios, { AxiosInstance } from "axios";
 
 // API Configuration - can be set via environment variable
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || "http://192.168.100.81:8000/api";
-const STRIPE_PUBLISHABLE_KEY = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || "";
+const API_BASE_URL =
+  process.env.EXPO_PUBLIC_API_BASE_URL || "http://192.168.100.81:8000/api";
+const STRIPE_PUBLISHABLE_KEY =
+  process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || "";
 
 class ApiService {
   client: AxiosInstance;
@@ -28,7 +30,7 @@ class ApiService {
       },
       (error) => {
         return Promise.reject(error);
-      }
+      },
     );
 
     // Add response interceptor for error handling
@@ -40,9 +42,12 @@ class ApiService {
           const refreshToken = await AsyncStorage.getItem("@refresh_token");
           if (refreshToken) {
             try {
-              const response = await axios.post(`${API_BASE_URL}/token/refresh/`, {
-                refresh: refreshToken,
-              });
+              const response = await axios.post(
+                `${API_BASE_URL}/token/refresh/`,
+                {
+                  refresh: refreshToken,
+                },
+              );
               await AsyncStorage.setItem("@access_token", response.data.access);
               return this.client(error.config);
             } catch (refreshError) {
@@ -53,7 +58,7 @@ class ApiService {
           }
         }
         return Promise.reject(error);
-      }
+      },
     );
   }
 
@@ -76,7 +81,10 @@ class ApiService {
       if (response.data.access) {
         await AsyncStorage.setItem("@access_token", response.data.access);
         await AsyncStorage.setItem("@refresh_token", response.data.refresh);
-        await AsyncStorage.setItem("@user_data", JSON.stringify(response.data.user));
+        await AsyncStorage.setItem(
+          "@user_data",
+          JSON.stringify(response.data.user),
+        );
       }
       return response.data;
     } catch (error) {
@@ -92,7 +100,10 @@ class ApiService {
       if (response.data.access) {
         await AsyncStorage.setItem("@access_token", response.data.access);
         await AsyncStorage.setItem("@refresh_token", response.data.refresh);
-        await AsyncStorage.setItem("@user_data", JSON.stringify(response.data.user));
+        await AsyncStorage.setItem(
+          "@user_data",
+          JSON.stringify(response.data.user),
+        );
       }
       return response.data;
     } catch (error) {
@@ -119,6 +130,15 @@ class ApiService {
   async getProfileDetails() {
     try {
       const response = await this.client.get("/users/profile/");
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async getDashboardOverview() {
+    try {
+      const response = await this.client.get("/users/dashboard/");
       return response.data;
     } catch (error) {
       throw error;
@@ -161,7 +181,9 @@ class ApiService {
 
   async likePost(postId: number) {
     try {
-      const response = await this.client.post(`/community/posts/${postId}/like/`);
+      const response = await this.client.post(
+        `/community/posts/${postId}/like/`,
+      );
       return response.data;
     } catch (error) {
       throw error;
@@ -170,7 +192,9 @@ class ApiService {
 
   async getPostComments(postId: number) {
     try {
-      const response = await this.client.get(`/community/posts/${postId}/comments/`);
+      const response = await this.client.get(
+        `/community/posts/${postId}/comments/`,
+      );
       return response.data;
     } catch (error) {
       throw error;
@@ -179,9 +203,12 @@ class ApiService {
 
   async addComment(postId: number, content: string) {
     try {
-      const response = await this.client.post(`/community/posts/${postId}/comments/`, {
-        content,
-      });
+      const response = await this.client.post(
+        `/community/posts/${postId}/comments/`,
+        {
+          content,
+        },
+      );
       return response.data;
     } catch (error) {
       throw error;
@@ -191,9 +218,12 @@ class ApiService {
   // ==================== PAYMENTS ENDPOINTS ====================
   async createPaymentIntent(plan: "monthly" | "annual") {
     try {
-      const response = await this.client.post("/payments/create-payment-intent/", {
-        plan,
-      });
+      const response = await this.client.post(
+        "/payments/create-payment-intent/",
+        {
+          plan,
+        },
+      );
       return response.data;
     } catch (error) {
       throw error;
@@ -257,7 +287,12 @@ class ApiService {
     }
   }
 
-  async predictYield(cropType: string, temperature: number, rainfall: number, soilNitrogen: number) {
+  async predictYield(
+    cropType: string,
+    temperature: number,
+    rainfall: number,
+    soilNitrogen: number,
+  ) {
     try {
       const response = await this.client.post("/ai/predict-yield/", {
         crop_type: cropType,
@@ -334,85 +369,6 @@ class ApiService {
   async createFarmData(farmData: any) {
     try {
       const response = await this.client.post("/users/farm-data/", farmData);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
-  }
-}
-
-export const apiService = new ApiService();
-export { STRIPE_PUBLISHABLE_KEY };
-      }
-      throw new Error(response.data.message || "Login failed");
-    } catch (error) {
-      throw error;
-    }
-  }
-
-  async logout() {
-    try {
-      await this.client.post(API_ENDPOINTS.AUTH.LOGOUT);
-      await AsyncStorage.removeItem("@user_token");
-      await AsyncStorage.removeItem("@user_data");
-    } catch (error) {
-      console.error("Logout error:", error);
-    }
-  }
-
-  // Dashboard Endpoints
-  async getDashboardOverview() {
-    try {
-      const response = await this.client.get(API_ENDPOINTS.DASHBOARD.OVERVIEW);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
-  }
-
-  async getWeather() {
-    try {
-      const response = await this.client.get(API_ENDPOINTS.DASHBOARD.WEATHER);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
-  }
-
-  // Crops Endpoints
-  async getCrops() {
-    try {
-      const response = await this.client.get(API_ENDPOINTS.CROPS.LIST);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
-  }
-
-  async getRecommendations() {
-    try {
-      const response = await this.client.get(
-        API_ENDPOINTS.CROPS.RECOMMENDATIONS,
-      );
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
-  }
-
-  // User Profile
-  async getProfile() {
-    try {
-      const response = await this.client.get(API_ENDPOINTS.USERS.PROFILE);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
-  }
-
-  async updateProfile(data: any) {
-    try {
-      const response = await this.client.put(API_ENDPOINTS.USERS.PROFILE, data);
       return response.data;
     } catch (error) {
       throw error;

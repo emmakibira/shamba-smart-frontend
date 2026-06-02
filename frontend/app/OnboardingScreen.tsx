@@ -11,7 +11,7 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import { useAuth } from "./contexts/AuthContext";
+import { useAuth } from "../contexts/AuthContext";
 
 const { width, height } = Dimensions.get("window");
 
@@ -49,7 +49,7 @@ const onboardingData: OnboardingItem[] = [
   },
 ];
 
-type NavigationProp = NativeStackNavigationProp<any>;
+
 
 export default function OnboardingScreen() {
   const { completeOnboarding } = useAuth();
@@ -219,11 +219,11 @@ export default function OnboardingScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: "#0F3D1E",
   },
   slide: {
     width,
-    height: height - 120,
+    height: height,
     alignItems: "center",
     justifyContent: "center",
   },

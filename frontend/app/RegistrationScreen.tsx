@@ -13,15 +13,16 @@ import {
   Alert,
   Animated,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Eye, EyeOff, Leaf, Check } from 'lucide-react-native';
 
-type NavigationProp = StackNavigationProp<any>;
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { doc, setDoc } from "firebase/firestore";
+import { auth, db } from "@/services/firebase";
+import { useRouter } from "expo-router";
 
 export default function RegistrationScreen() {
-  const navigation = useNavigation<NavigationProp>();
+  const router = useRouter();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -62,13 +63,32 @@ export default function RegistrationScreen() {
     }
 
     setLoading(true);
-    // Simulate API call
-    setTimeout(() => {
+    
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      
+      // Save additional user data to Firestore
+      await setDoc(doc(db, "users", userCredential.user.uid), {
+        name,
+        email,
+        phone,
+        createdAt: new Date().toISOString(),
+      });
+      
       setLoading(false);
-      Alert.alert('Success', 'Account created successfully!', [
-        { text: 'OK', onPress: () => navigation.replace('Main') }
-      ]);
-    }, 1500);
+      Alert.alert('Success', 'Account created successfully!');
+      // _layout.tsx will automatically route authenticated users, but we can also manually push
+    } catch (error: any) {
+      setLoading(false);
+      let errorMessage = "Registration failed. Please try again.";
+      if (error.code === 'auth/email-already-in-use') {
+        errorMessage = "That email address is already in use!";
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = "That email address is invalid!";
+      }
+      Alert.alert('Registration Error', errorMessage);
+      console.error(error);
+    }
   };
 
   return (
@@ -191,7 +211,7 @@ export default function RegistrationScreen() {
 
             <View style={styles.loginContainer}>
               <Text style={styles.loginText}>Already have an account? </Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+              <TouchableOpacity onPress={() => router.replace('/LoginScreen')}>
                 <Text style={styles.loginLink}>Login</Text>
               </TouchableOpacity>
             </View>

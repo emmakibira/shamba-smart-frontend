@@ -1,5 +1,8 @@
 // src/screens/LoginScreen.tsx
 import apiService from "@/services/api";
+import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { doc, setDoc } from "firebase/firestore";
+import { auth, db } from "@/services/firebase";
 import { LinearGradient } from "expo-linear-gradient";
 import { Eye, EyeOff, Leaf } from "lucide-react-native";
 import React, { useState } from "react";
@@ -16,9 +19,11 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import { useAuth } from "./contexts/AuthContext";
+import { useAuth } from "../contexts/AuthContext";
+import { useRouter } from "expo-router";
 
 export default function LoginScreen() {
+  const router = useRouter();
   const { login } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -42,20 +47,54 @@ export default function LoginScreen() {
 
     setLoading(true);
     try {
-      const response = await apiService.login(username, password);
-      if (response.success) {
-        Alert.alert("Success", "Login successful");
-        setLoading(false);
-        login();
-      }
+      // In a real app we'd rename 'username' state to 'email', but handling it here for seamless transition
+      const emailToUse = username.includes('@') ? username : `${username}@shambasmart.com`;
+      await signInWithEmailAndPassword(auth, emailToUse, password);
+      Alert.alert("Success", "Login successful");
+      setLoading(false);
+      // login() is handled automatically by AuthContext's onAuthStateChanged listener
+      login();
     } catch (error: any) {
       setLoading(false);
-      const errorMessage =
-        error.response?.data?.errors?.username?.[0] ||
-        error.response?.data?.message ||
-        "Login failed. Please try again.";
+      let errorMessage = "Login failed. Please try again.";
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+        errorMessage = "Invalid email or password.";
+      }
       Alert.alert("Login Error", errorMessage);
       console.error("Login error:", error);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setLoading(true);
+    try {
+      if (Platform.OS === 'web') {
+        const provider = new GoogleAuthProvider();
+        const result = await signInWithPopup(auth, provider);
+        
+        // Save user details to Firestore if not already present
+        const userDocRef = doc(db, "users", result.user.uid);
+        await setDoc(userDocRef, {
+          name: result.user.displayName || "Google User",
+          email: result.user.email,
+          phone: result.user.phoneNumber || "",
+          createdAt: new Date().toISOString(),
+        }, { merge: true });
+
+        Alert.alert("Success", `Logged in as ${result.user.displayName}`);
+        login();
+      } else {
+        // Fallback for native
+        Alert.alert(
+          "Google Sign-In",
+          "Google Sign-In on mobile is only supported in production builds. For testing, please use Metro Web or regular email login."
+        );
+      }
+    } catch (error: any) {
+      console.error("Google Sign-In Error:", error);
+      Alert.alert("Google Sign-In Error", error.message || "Sign-in failed");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -158,10 +197,18 @@ export default function LoginScreen() {
               )}
             </TouchableOpacity>
 
+            <TouchableOpacity
+              style={styles.googleButton}
+              onPress={handleGoogleSignIn}
+              disabled={loading}
+            >
+              <Text style={styles.googleButtonText}>Sign in with Google</Text>
+            </TouchableOpacity>
+
             <View style={styles.registerContainer}>
               <Text style={styles.registerText}>Don't have an account? </Text>
               <TouchableOpacity
-                onPress={() => Alert.alert("Registration coming soon!")}
+                onPress={() => router.replace('/RegistrationScreen')}
               >
                 <Text style={styles.registerLink}>Sign Up</Text>
               </TouchableOpacity>
@@ -256,7 +303,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: "center",
-    marginBottom: 24,
+    marginBottom: 16,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -267,6 +314,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
     color: "#2E7D32",
+  },
+  googleButton: {
+    backgroundColor: "rgba(255, 255, 255, 0.15)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.3)",
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: "center",
+    marginBottom: 24,
+  },
+  googleButtonText: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#fff",
   },
   registerContainer: {
     flexDirection: "row",
