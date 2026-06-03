@@ -1,8 +1,9 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios, { AxiosInstance } from "axios";
 import { auth } from "./firebase";
 
 // API Configuration
-const API_BASE_URL = "https://shamba-smart-backend.onrender.com/api";
+export const API_BASE_URL = "https://shamba-smart-backend.onrender.com/api";
 
 console.log("API URL:", API_BASE_URL);
 
@@ -18,34 +19,20 @@ class ApiService {
       },
     });
 
-    // ==================== FIREBASE AUTH INTERCEPTOR ====================
+    // ==================== JWT AUTH INTERCEPTOR ====================
     this.client.interceptors.request.use(
       async (config) => {
-        const user = auth.currentUser;
+        config.headers = config.headers ?? {};
 
-        if (user) {
-          const idToken = await user.getIdToken(true); // Firebase ID token
-          config.headers.Authorization = `Bearer ${idToken}`;
+        const accessToken = await AsyncStorage.getItem("access_token");
+        if (accessToken) {
+          config.headers.Authorization = `Bearer ${accessToken}`;
         }
 
         return config;
       },
       (error) => Promise.reject(error),
     );
-  
-  this.client.interceptors.request.use(async (config) => {
-  const user = auth.currentUser;
-
-  const idToken = user ? await user.getIdToken(true) : null;
-
-  console.log("🔥 USER:", user?.email);
-  console.log("🔥 TOKEN:", idToken);
-
-  config.headers = config.headers ?? {};
-  config.headers.Authorization = `Bearer ${idToken}`;
-
-  return config;
-});
   }
 
   // ==================== AUTH ====================
@@ -55,7 +42,51 @@ class ApiService {
         firebase_token: firebaseToken,
       });
 
-      return response.data;
+      const data = response.data;
+      if (data.access) {
+        await AsyncStorage.setItem("access_token", data.access);
+      }
+      if (data.refresh) {
+        await AsyncStorage.setItem("refresh_token", data.refresh);
+      }
+
+      return data;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async clearAuthTokens() {
+    await AsyncStorage.removeItem("access_token");
+    await AsyncStorage.removeItem("refresh_token");
+  }
+
+  async registerUser(registrationData: {
+    email: string;
+    password: string;
+    first_name?: string;
+    last_name?: string;
+    phone_number?: string;
+    latitude: number;
+    longitude: number;
+    location_address?: string;
+    farm_size: number;
+    primary_crops: string[];
+    soil_type: string;
+  }) {
+    try {
+      const response = await this.client.post(
+        "/auth/register/",
+        registrationData,
+      );
+      const data = response.data;
+      if (data.access) {
+        await AsyncStorage.setItem("access_token", data.access);
+      }
+      if (data.refresh) {
+        await AsyncStorage.setItem("refresh_token", data.refresh);
+      }
+      return data;
     } catch (error) {
       throw error;
     }
@@ -82,7 +113,7 @@ class ApiService {
   }
 
   async getDashboardOverview() {
-    const response = await this.client.get("/users/dashboard/");
+    const response = await this.client.get("/dashboard/overview/");
     return response.data;
   }
 

@@ -1,12 +1,6 @@
+import apiService from "@/services/api";
+import type { AppUser, UserRole } from "@/types";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import React, {
-  createContext,
-  ReactNode,
-  useCallback,
-  useContext,
-  useEffect,
-  useState,
-} from "react";
 import {
   createUserWithEmailAndPassword,
   onAuthStateChanged,
@@ -15,7 +9,14 @@ import {
   User,
 } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
-import type { AppUser, UserRole } from "@/types";
+import React, {
+  createContext,
+  ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 import { auth, db } from "../services/firebase";
 import { sessionManager } from "../services/sessionManager";
 
@@ -71,9 +72,16 @@ async function loadAppUser(firebaseUser: User): Promise<AppUser> {
     displayName: firebaseUser.displayName ?? "Farmer",
     role: "farmer",
   };
-  await setDoc(ref, { ...fallback, createdAt: new Date().toISOString() }, { merge: true });
+  await setDoc(
+    ref,
+    { ...fallback, createdAt: new Date().toISOString() },
+    { merge: true },
+  );
   return fallback;
 }
+
+const ACCESS_TOKEN_KEY = "@access_token";
+const REFRESH_TOKEN_KEY = "@refresh_token";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
@@ -81,6 +89,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [appUser, setAppUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const storeTokens = async (accessToken: string, refreshToken?: string) => {
+    try {
+      await AsyncStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
+      if (refreshToken) {
+        await AsyncStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+      }
+    } catch (error) {
+      console.error("Error storing auth tokens:", error);
+    }
+  };
+
+  const clearTokens = async () => {
+    try {
+      await AsyncStorage.removeItem(ACCESS_TOKEN_KEY);
+      await AsyncStorage.removeItem(REFRESH_TOKEN_KEY);
+    } catch (error) {
+      console.error("Error clearing auth tokens:", error);
+    }
+  };
+
+  const syncBackendAuth = useCallback(async (firebaseUser: User) => {
+    try {
+      const firebaseToken = await firebaseUser.getIdToken(true);
+      const authResponse =
+        await apiService.loginWithFirebaseToken(firebaseToken);
+      if (authResponse.access) {
+        await storeTokens(authResponse.access, authResponse.refresh);
+      }
+    } catch (error) {
+      console.error("Backend auth sync failed:", error);
+    }
+  }, []);
 
   const refreshProfile = useCallback(async () => {
     if (!user) return;
@@ -98,8 +139,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
           const profile = await loadAppUser(firebaseUser);
           setAppUser(profile);
+          await syncBackendAuth(firebaseUser);
           sessionManager.start();
-        } catch {
+        } catch (error) {
+          console.error(
+            "Error loading app user or syncing backend auth:",
+            error,
+          );
           setAppUser({
             uid: firebaseUser.uid,
             email: firebaseUser.email ?? "",
@@ -109,13 +155,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       } else {
         setAppUser(null);
+        await clearTokens();
         sessionManager.stop();
       }
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [syncBackendAuth]);
 
   const checkOnboardingState = async () => {
     try {
@@ -137,7 +184,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const login = async (email: string, password: string) => {
-    await signInWithEmailAndPassword(auth, email, password);
+    const credential = await signInWithEmailAndPassword(auth, email, password);
+    await syncBackendAuth(credential.user);
     sessionManager.resetActivity();
   };
 
@@ -147,6 +195,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       params.email,
       params.password,
     );
+
     await setDoc(doc(db, "users", cred.user.uid), {
       displayName: params.displayName,
       email: params.email,
@@ -156,12 +205,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       farmDetails: params.farmDetails ?? null,
       createdAt: new Date().toISOString(),
     });
+
+    const [firstName, ...rest] = params.displayName.trim().split(" ");
+    const lastName = rest.join(" ");
+
+    await apiService.registerUser({
+      email: params.email,
+      password: params.password,
+      first_name: firstName,
+      last_name: lastName,
+      phone_number: params.phone ?? "",
+      latitude: 0,
+      longitude: 0,
+      location_address: "",
+      farm_size: 0,
+      primary_crops: [],
+      soil_type: "loam",
+    });
+
     sessionManager.resetActivity();
   };
 
   const logout = async () => {
     try {
       await signOut(auth);
+      await clearTokens();
       sessionManager.stop();
     } catch (error) {
       console.error("Error logging out:", error);

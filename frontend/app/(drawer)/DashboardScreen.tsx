@@ -1,31 +1,30 @@
 // src/screens/DashboardScreen.tsx
 import apiService from "@/services/api";
-import * as Location from "expo-location";
-import { useAuth } from "../../contexts/AuthContext";
 import { LinearGradient } from "expo-linear-gradient";
 import {
-    Bell,
-    Droplets,
-    Leaf,
-    Sprout,
-    Sun,
-    Thermometer,
-    TrendingUp,
-    Wind,
-    Cloud,
-    Zap,
+  Bell,
+  Cloud,
+  Droplets,
+  Leaf,
+  Sprout,
+  Sun,
+  Thermometer,
+  TrendingUp,
+  Wind,
+  Zap,
 } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
 import {
-    Animated,
-    Dimensions,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Animated,
+  Dimensions,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useAuth } from "../../contexts/AuthContext";
 
 const { width } = Dimensions.get("window");
 
@@ -71,12 +70,12 @@ export default function DashboardScreen() {
   const slideAnim4 = useRef(new Animated.Value(50)).current;
 
   const [weatherData, setWeatherData] = useState<WeatherData>({
-  temperature: 0,
-  humidity: 0,
-  windSpeed: 0,
-  rainfall: 0,
-  condition: "Loading...",
-});
+    temperature: 0,
+    humidity: 0,
+    windSpeed: 0,
+    rainfall: 0,
+    condition: "Loading...",
+  });
 
   const [cropRecommendations, setCropRecommendations] = useState<
     CropRecommendation[]
@@ -112,7 +111,7 @@ export default function DashboardScreen() {
 
   useEffect(() => {
     fetchDashboardData();
-    fetchWeather();
+    fetchWeatherAdvisory();
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -151,7 +150,7 @@ export default function DashboardScreen() {
   const fetchDashboardData = async () => {
     try {
       const response = await apiService.getDashboardOverview();
-      
+
       if (response.recommendations && response.recommendations.length > 0) {
         const formattedRecs = response.recommendations.map((rec: any) => ({
           id: rec.id?.toString(),
@@ -170,117 +169,95 @@ export default function DashboardScreen() {
     }
   };
 
-
   const [, setCurrentTime] = useState(new Date());
 
-useEffect(() => {
-  const timer = setInterval(() => {
-    setCurrentTime(new Date());
-  }, 60000);
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60000);
 
-  return () => clearInterval(timer);
-}, []);
+    return () => clearInterval(timer);
+  }, []);
 
   const getGreeting = () => {
-  const hour = new Date().getHours();
+    const hour = new Date().getHours();
 
-  if (hour < 12) {
-    return "Good Morning";
-  }
-
-  if (hour < 17) {
-    return "Good Afternoon";
-  }
-
-  return "Good Evening";
-};
-
-const getUserName = () => {
-  if (appUser?.displayName) {
-    return appUser.displayName;
-  }
-
-  if (appUser?.email) {
-    return appUser.email.split("@")[0];
-  }
-
-  return "Farmer";
-};
-
-const getWeatherCondition = (code: number) => {
-  const weatherCodes: Record<number, string> = {
-    0: "Clear Sky",
-    1: "Mainly Clear",
-    2: "Partly Cloudy",
-    3: "Overcast",
-    45: "Fog",
-    48: "Fog",
-    51: "Light Drizzle",
-    53: "Drizzle",
-    55: "Heavy Drizzle",
-    61: "Light Rain",
-    63: "Rain",
-    65: "Heavy Rain",
-    71: "Snow",
-    80: "Rain Showers",
-    81: "Rain Showers",
-    82: "Heavy Showers",
-    95: "Thunderstorm",
-  };
-
-  return weatherCodes[code] || "Unknown";
-};
-
-const fetchWeather = async () => {
-  try {
-    const { status } =
-      await Location.requestForegroundPermissionsAsync();
-
-    if (status !== "granted") {
-      console.log("Location permission denied");
-      return;
+    if (hour < 12) {
+      return "Good Morning";
     }
 
-    const location = await Location.getCurrentPositionAsync({
-      accuracy: Location.Accuracy.Balanced,
-    });
+    if (hour < 17) {
+      return "Good Afternoon";
+    }
 
-    const { latitude, longitude } = location.coords;
+    return "Good Evening";
+  };
 
-    const response = await fetch(
-      `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&daily=precipitation_sum&timezone=auto`
-    );
+  const getUserName = () => {
+    if (appUser?.displayName) {
+      return appUser.displayName;
+    }
 
-    const data = await response.json();
+    if (appUser?.email) {
+      return appUser.email.split("@")[0];
+    }
 
-    setWeatherData({
-      temperature: Math.round(data.current.temperature_2m),
-      humidity: data.current.relative_humidity_2m,
-      windSpeed: Math.round(data.current.wind_speed_10m),
-      rainfall: Math.round(data.daily.precipitation_sum?.[0] ?? 0),
-      condition: getWeatherCondition(data.current.weather_code),
-    });
+    return "Farmer";
+  };
 
-    console.log("Weather:", data);
-  } catch (error) {
-    console.error("Weather error:", error);
-  }
-};
+  const getWeatherCondition = (code: number) => {
+    const weatherCodes: Record<number, string> = {
+      0: "Clear Sky",
+      1: "Mainly Clear",
+      2: "Partly Cloudy",
+      3: "Overcast",
+      45: "Fog",
+      48: "Fog",
+      51: "Light Drizzle",
+      53: "Drizzle",
+      55: "Heavy Drizzle",
+      61: "Light Rain",
+      63: "Rain",
+      65: "Heavy Rain",
+      71: "Snow",
+      80: "Rain Showers",
+      81: "Rain Showers",
+      82: "Heavy Showers",
+      95: "Thunderstorm",
+    };
 
-const getWeatherIcon = () => {
-  const condition = weatherData.condition.toLowerCase();
+    return weatherCodes[code] || "Unknown";
+  };
 
-  if (condition.includes("rain")) {
-    return <Droplets size={56} color="#81C784" />;
-  }
+  const fetchWeatherAdvisory = async () => {
+    try {
+      const response = await apiService.getWeatherAdvisory();
 
-  if (condition.includes("cloud")) {
-    return <Cloud size={56} color="#FFFFFF" />;
-  }
+      setWeatherData({
+        temperature: Math.round(response.temperature),
+        humidity: response.humidity,
+        windSpeed: Math.round(response.wind_speed),
+        rainfall: Math.round(response.rainfall),
+        condition: getWeatherCondition(response.weather_code ?? 0),
+      });
+    } catch (error) {
+      console.error("Error fetching weather advisory:", error);
+    }
+  };
 
-  return <Sun size={56} color="#FFD700" />;
-};
+  const getWeatherIcon = () => {
+    const condition = weatherData.condition.toLowerCase();
 
+    if (condition.includes("rain")) {
+      return <Droplets size={56} color="#81C784" />;
+    }
+
+    if (condition.includes("cloud")) {
+      return <Cloud size={56} color="#FFFFFF" />;
+    }
+
+    return <Sun size={56} color="#FFD700" />;
+  };
 
   return (
     <View style={styles.container}>
@@ -294,7 +271,7 @@ const getWeatherIcon = () => {
           style={[
             styles.header,
             {
-              paddingTop:0,
+              paddingTop: 0,
             },
           ]}
         >
@@ -304,13 +281,9 @@ const getWeatherIcon = () => {
           >
             <View style={styles.headerContent}>
               <View>
-                <Text style={styles.greeting}>
-                   {getGreeting()},
-                </Text>
+                <Text style={styles.greeting}>{getGreeting()},</Text>
 
-               <Text style={styles.userName}>
-                {getUserName()}
-                </Text>
+                <Text style={styles.userName}>{getUserName()}</Text>
               </View>
               <TouchableOpacity
                 style={styles.notificationButton}
@@ -387,8 +360,11 @@ const getWeatherIcon = () => {
           </Animated.View>
 
           {/* Quick Actions */}
-          <Animated.View 
-            style={[styles.section, { opacity: fadeAnim, transform: [{ translateY: slideAnim2 }] }]}
+          <Animated.View
+            style={[
+              styles.section,
+              { opacity: fadeAnim, transform: [{ translateY: slideAnim2 }] },
+            ]}
           >
             <Text style={styles.sectionTitle}>Quick Actions</Text>
             <View style={styles.quickActionsContainer}>
@@ -432,8 +408,11 @@ const getWeatherIcon = () => {
           </Animated.View>
 
           {/* Crop Health Status */}
-          <Animated.View 
-            style={[styles.section, { opacity: fadeAnim, transform: [{ translateY: slideAnim3 }] }]}
+          <Animated.View
+            style={[
+              styles.section,
+              { opacity: fadeAnim, transform: [{ translateY: slideAnim3 }] },
+            ]}
           >
             <Text style={styles.sectionTitle}>Crop Health Status</Text>
             <View style={styles.healthCard}>

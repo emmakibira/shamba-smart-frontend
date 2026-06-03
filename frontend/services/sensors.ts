@@ -1,3 +1,4 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { API_BASE_URL } from "./api";
 
@@ -66,8 +67,9 @@ const sensorAPI = axios.create({
 });
 
 // Add auth token to requests
-sensorAPI.interceptors.request.use((config) => {
-  const token = localStorage.getItem("access_token");
+sensorAPI.interceptors.request.use(async (config) => {
+  config.headers = config.headers ?? {};
+  const token = await AsyncStorage.getItem("access_token");
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
