@@ -12,6 +12,7 @@ import {
 import { MINISTRY_REPORT_MAY_2026 } from "@/constants/crops";
 import type { CropKey, MarketWeekReport, RegionalMarketPrices } from "@/types";
 import { db } from "./firebase";
+import api from "./api";
 
 const CACHE_KEY = "@market_latest_report";
 
@@ -34,6 +35,16 @@ export async function ensureSeedReportLoaded(): Promise<MarketWeekReport> {
 }
 
 export async function getLatestMarketReport(): Promise<MarketWeekReport | null> {
+  try {
+    const data = await api.getLatestMarketReport();
+    if (data && data.id) {
+      await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(data));
+      return data as MarketWeekReport;
+    }
+  } catch (error) {
+    console.log("Failed to fetch market report from Django API, falling back to Firestore");
+  }
+
   try {
     const q = query(
       collection(db, "marketReports"),

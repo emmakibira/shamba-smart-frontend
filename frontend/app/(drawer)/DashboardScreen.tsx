@@ -1,5 +1,7 @@
 // src/screens/DashboardScreen.tsx
 import apiService from "@/services/api";
+import * as Location from "expo-location";
+import { useAuth } from "../../contexts/AuthContext";
 import { LinearGradient } from "expo-linear-gradient";
 import {
     Bell,
@@ -10,6 +12,7 @@ import {
     Thermometer,
     TrendingUp,
     Wind,
+    Cloud,
     Zap,
 } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
@@ -58,6 +61,7 @@ const getDashIcon = (iconName: string, size: number, color: string) => {
 };
 
 export default function DashboardScreen() {
+  const { appUser } = useAuth();
   const insets = useSafeAreaInsets();
   const scrollY = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -67,12 +71,12 @@ export default function DashboardScreen() {
   const slideAnim4 = useRef(new Animated.Value(50)).current;
 
   const [weatherData, setWeatherData] = useState<WeatherData>({
-    temperature: 28,
-    humidity: 65,
-    windSpeed: 12,
-    rainfall: 15,
-    condition: "Partly Cloudy",
-  });
+  temperature: 0,
+  humidity: 0,
+  windSpeed: 0,
+  rainfall: 0,
+  condition: "Loading...",
+});
 
   const [cropRecommendations, setCropRecommendations] = useState<
     CropRecommendation[]
@@ -108,6 +112,7 @@ export default function DashboardScreen() {
 
   useEffect(() => {
     fetchDashboardData();
+    fetchWeather();
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -146,15 +151,7 @@ export default function DashboardScreen() {
   const fetchDashboardData = async () => {
     try {
       const response = await apiService.getDashboardOverview();
-      if (response.weather) {
-        setWeatherData({
-          temperature: response.weather.temperature,
-          humidity: response.weather.humidity,
-          windSpeed: response.weather.wind_speed,
-          rainfall: response.weather.rainfall,
-          condition: response.weather.condition,
-        });
-      }
+      
       if (response.recommendations && response.recommendations.length > 0) {
         const formattedRecs = response.recommendations.map((rec: any) => ({
           id: rec.id?.toString(),
@@ -173,6 +170,116 @@ export default function DashboardScreen() {
     }
   };
 
+
+  const [, setCurrentTime] = useState(new Date());
+
+useEffect(() => {
+  const timer = setInterval(() => {
+    setCurrentTime(new Date());
+  }, 60000);
+
+  return () => clearInterval(timer);
+}, []);
+
+  const getGreeting = () => {
+  const hour = new Date().getHours();
+
+  if (hour < 12) {
+    return "Good Morning";
+  }
+
+  if (hour < 17) {
+    return "Good Afternoon";
+  }
+
+  return "Good Evening";
+};
+
+const getUserName = () => {
+  if (appUser?.displayName) {
+    return appUser.displayName;
+  }
+
+  if (appUser?.email) {
+    return appUser.email.split("@")[0];
+  }
+
+  return "Farmer";
+};
+
+const getWeatherCondition = (code: number) => {
+  const weatherCodes: Record<number, string> = {
+    0: "Clear Sky",
+    1: "Mainly Clear",
+    2: "Partly Cloudy",
+    3: "Overcast",
+    45: "Fog",
+    48: "Fog",
+    51: "Light Drizzle",
+    53: "Drizzle",
+    55: "Heavy Drizzle",
+    61: "Light Rain",
+    63: "Rain",
+    65: "Heavy Rain",
+    71: "Snow",
+    80: "Rain Showers",
+    81: "Rain Showers",
+    82: "Heavy Showers",
+    95: "Thunderstorm",
+  };
+
+  return weatherCodes[code] || "Unknown";
+};
+
+const fetchWeather = async () => {
+  try {
+    const { status } =
+      await Location.requestForegroundPermissionsAsync();
+
+    if (status !== "granted") {
+      console.log("Location permission denied");
+      return;
+    }
+
+    const location = await Location.getCurrentPositionAsync({
+      accuracy: Location.Accuracy.Balanced,
+    });
+
+    const { latitude, longitude } = location.coords;
+
+    const response = await fetch(
+      `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&daily=precipitation_sum&timezone=auto`
+    );
+
+    const data = await response.json();
+
+    setWeatherData({
+      temperature: Math.round(data.current.temperature_2m),
+      humidity: data.current.relative_humidity_2m,
+      windSpeed: Math.round(data.current.wind_speed_10m),
+      rainfall: Math.round(data.daily.precipitation_sum?.[0] ?? 0),
+      condition: getWeatherCondition(data.current.weather_code),
+    });
+
+    console.log("Weather:", data);
+  } catch (error) {
+    console.error("Weather error:", error);
+  }
+};
+
+const getWeatherIcon = () => {
+  const condition = weatherData.condition.toLowerCase();
+
+  if (condition.includes("rain")) {
+    return <Droplets size={56} color="#81C784" />;
+  }
+
+  if (condition.includes("cloud")) {
+    return <Cloud size={56} color="#FFFFFF" />;
+  }
+
+  return <Sun size={56} color="#FFD700" />;
+};
 
 
   return (
@@ -197,8 +304,13 @@ export default function DashboardScreen() {
           >
             <View style={styles.headerContent}>
               <View>
-                <Text style={styles.greeting}>Good Morning,</Text>
-                <Text style={styles.userName}>Farmer John</Text>
+                <Text style={styles.greeting}>
+                   {getGreeting()},
+                </Text>
+
+               <Text style={styles.userName}>
+                {getUserName()}
+                </Text>
               </View>
               <TouchableOpacity
                 style={styles.notificationButton}
@@ -244,7 +356,7 @@ export default function DashboardScreen() {
                   {weatherData.temperature}°C
                 </Text>
                 <View style={styles.weatherIconContainer}>
-                  <Sun size={56} color="#FFD700" />
+                  {getWeatherIcon()}
                 </View>
               </View>
 

@@ -18,6 +18,7 @@ import {
   User,
   Users,
 } from "lucide-react-native";
+import { useAppTheme } from "../../contexts/ThemeContext";
 import React, { useState } from "react";
 import {
   Alert,
@@ -64,7 +65,7 @@ export default function ProfileScreen() {
   const { isPremium, upgradeToPremium, communityPostsThisMonth } =
     useSubscription();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [darkMode, setDarkMode] = useState(false);
+  const { isDarkMode, toggleDarkMode } = useAppTheme();
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
 
@@ -167,11 +168,16 @@ export default function ProfileScreen() {
                   </View>
                 </LinearGradient>
               </TouchableOpacity>
+              <Text style={styles.userName}>
+                {userProfile.displayName || appUser?.displayName || "Farmer"}
+              </Text>
               <Text style={styles.userEmail}>
                 @{(userProfile.username as string) || appUser?.email?.split("@")[0] || "farmer"}
               </Text>
               <View style={styles.locationBadge}>
-                <Text style={styles.locationText}>📍Dar es salaam</Text>
+                <Text style={styles.locationText}>
+                  📍{userProfile.location_address || userProfile.regionId || appUser?.regionId || "Morogoro, Tanzania"}
+                </Text>
               </View>
             </View>
           </LinearGradient>
@@ -185,7 +191,7 @@ export default function ProfileScreen() {
             </View>
             <View style={styles.statCard}>
               <TrendingUp size={24} color="#2E7D32" />
-              <Text style={styles.statNumber}>₹ 2,45,000</Text>
+              <Text style={styles.statNumber}>TSh 245,000</Text>
               <Text style={styles.statLabel}>Total Profit</Text>
             </View>
             <View style={styles.statCard}>
@@ -305,8 +311,8 @@ export default function ProfileScreen() {
                 <Text style={styles.menuTitle}>Dark Mode</Text>
               </View>
               <Switch
-                value={darkMode}
-                onValueChange={setDarkMode}
+                value={isDarkMode}
+                onValueChange={toggleDarkMode}
                 trackColor={{ false: "#ddd", true: "#2E7D32" }}
               />
             </View>

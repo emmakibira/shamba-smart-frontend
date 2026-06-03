@@ -65,6 +65,12 @@
           "merchantIdentifier": "merchant.com.shambasmart",
           "enableGooglePay": false
         }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow Shamba Smart to access your location for weather information."
+        }
       ]
     ],
     "experiments": {

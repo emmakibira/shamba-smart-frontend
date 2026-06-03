@@ -186,7 +186,7 @@ export default function MarketScreen() {
               </View>
               <View style={styles.summaryDivider} />
               <View style={styles.summaryStat}>
-                <Text style={styles.summaryStatValue}>₹ 42,500 Cr</Text>
+                <Text style={styles.summaryStatValue}>TSh 42.5M</Text>
                 <Text style={styles.summaryStatLabel}>Total Volume</Text>
               </View>
               <View style={styles.summaryDivider} />
@@ -205,7 +205,7 @@ export default function MarketScreen() {
             <View style={styles.alertContent}>
               <Text style={styles.alertTitle}>Best Price Today</Text>
               <Text style={styles.alertText}>
-                Soybean at ₹4,250/quintal in Indore Mandi
+                Mchele at TSh 2,300/kg in Dodoma Market
               </Text>
             </View>
             <ChevronRight size={20} color="#2E7D32" />
@@ -239,7 +239,7 @@ export default function MarketScreen() {
                 </View>
                 <View style={styles.priceInfo}>
                   <Text style={styles.commodityPrice}>
-                    ₹{commodity.price.toLocaleString()}
+                    TSh {commodity.price.toLocaleString()}
                   </Text>
                   <View
                     style={[

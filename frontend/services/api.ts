@@ -1,11 +1,10 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios, { AxiosInstance } from "axios";
+import { auth } from "./firebase";
 
-// API Configuration - can be set via environment variable
-const API_BASE_URL =
-  process.env.EXPO_PUBLIC_API_BASE_URL || "http://192.168.100.81:8000/api";
-const STRIPE_PUBLISHABLE_KEY =
-  process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || "";
+// API Configuration
+const API_BASE_URL = "https://shamba-smart-backend.onrender.com/api";
+
+console.log("API URL:", API_BASE_URL);
 
 class ApiService {
   client: AxiosInstance;
@@ -13,98 +12,49 @@ class ApiService {
   constructor() {
     this.client = axios.create({
       baseURL: API_BASE_URL,
-      timeout: 15000,
+      timeout: 60000,
       headers: {
         "Content-Type": "application/json",
       },
     });
 
-    // Add request interceptor to include auth token
+    // ==================== FIREBASE AUTH INTERCEPTOR ====================
     this.client.interceptors.request.use(
       async (config) => {
-        const token = await AsyncStorage.getItem("@access_token");
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
+        const user = auth.currentUser;
+
+        if (user) {
+          const idToken = await user.getIdToken(true); // Firebase ID token
+          config.headers.Authorization = `Bearer ${idToken}`;
         }
+
         return config;
       },
-      (error) => {
-        return Promise.reject(error);
-      },
+      (error) => Promise.reject(error),
     );
+  
+  this.client.interceptors.request.use(async (config) => {
+  const user = auth.currentUser;
 
-    // Add response interceptor for error handling
-    this.client.interceptors.response.use(
-      (response) => response,
-      async (error) => {
-        if (error.response?.status === 401) {
-          // Token expired, try to refresh
-          const refreshToken = await AsyncStorage.getItem("@refresh_token");
-          if (refreshToken) {
-            try {
-              const response = await axios.post(
-                `${API_BASE_URL}/token/refresh/`,
-                {
-                  refresh: refreshToken,
-                },
-              );
-              await AsyncStorage.setItem("@access_token", response.data.access);
-              return this.client(error.config);
-            } catch (refreshError) {
-              // Refresh failed, user needs to login again
-              await AsyncStorage.removeItem("@access_token");
-              await AsyncStorage.removeItem("@refresh_token");
-            }
-          }
-        }
-        return Promise.reject(error);
-      },
-    );
+  const idToken = user ? await user.getIdToken(true) : null;
+
+  console.log("🔥 USER:", user?.email);
+  console.log("🔥 TOKEN:", idToken);
+
+  config.headers = config.headers ?? {};
+  config.headers.Authorization = `Bearer ${idToken}`;
+
+  return config;
+});
   }
 
-  // ==================== AUTH ENDPOINTS ====================
-  async register(userData: {
-    email: string;
-    password: string;
-    first_name?: string;
-    last_name?: string;
-    phone_number?: string;
-    latitude: number;
-    longitude: number;
-    location_address?: string;
-    farm_size: number;
-    primary_crops: string[];
-    soil_type?: string;
-  }) {
-    try {
-      const response = await this.client.post("/auth/register/", userData);
-      if (response.data.access) {
-        await AsyncStorage.setItem("@access_token", response.data.access);
-        await AsyncStorage.setItem("@refresh_token", response.data.refresh);
-        await AsyncStorage.setItem(
-          "@user_data",
-          JSON.stringify(response.data.user),
-        );
-      }
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
-  }
-
+  // ==================== AUTH ====================
   async loginWithFirebaseToken(firebaseToken: string) {
     try {
       const response = await this.client.post("/auth/login/", {
         firebase_token: firebaseToken,
       });
-      if (response.data.access) {
-        await AsyncStorage.setItem("@access_token", response.data.access);
-        await AsyncStorage.setItem("@refresh_token", response.data.refresh);
-        await AsyncStorage.setItem(
-          "@user_data",
-          JSON.stringify(response.data.user),
-        );
-      }
+
       return response.data;
     } catch (error) {
       throw error;
@@ -121,170 +71,103 @@ class ApiService {
   }
 
   async logout() {
-    await AsyncStorage.removeItem("@access_token");
-    await AsyncStorage.removeItem("@refresh_token");
-    await AsyncStorage.removeItem("@user_data");
+    // Firebase logout should be handled in auth layer
+    await auth.signOut();
   }
 
-  // ==================== USERS ENDPOINTS ====================
+  // ==================== USERS ====================
   async getProfileDetails() {
-    try {
-      const response = await this.client.get("/users/profile/");
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await this.client.get("/users/profile/");
+    return response.data;
   }
 
   async getDashboardOverview() {
-    try {
-      const response = await this.client.get("/users/dashboard/");
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await this.client.get("/users/dashboard/");
+    return response.data;
   }
 
   async updateProfile(profileData: any) {
-    try {
-      const response = await this.client.put("/users/profile/", {
-        profile: profileData,
-      });
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await this.client.put("/users/profile/", {
+      profile: profileData,
+    });
+    return response.data;
   }
 
-  // ==================== COMMUNITY ENDPOINTS ====================
+  // ==================== COMMUNITY ====================
   async getPosts(page = 1) {
-    try {
-      const response = await this.client.get("/community/posts/", {
-        params: { page },
-      });
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await this.client.get("/community/posts/", {
+      params: { page },
+    });
+    return response.data;
   }
 
   async createPost(formData: FormData) {
-    try {
-      const response = await this.client.post("/community/posts/", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await this.client.post("/community/posts/", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return response.data;
   }
 
   async likePost(postId: number) {
-    try {
-      const response = await this.client.post(
-        `/community/posts/${postId}/like/`,
-      );
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await this.client.post(`/community/posts/${postId}/like/`);
+    return response.data;
   }
 
   async getPostComments(postId: number) {
-    try {
-      const response = await this.client.get(
-        `/community/posts/${postId}/comments/`,
-      );
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await this.client.get(
+      `/community/posts/${postId}/comments/`,
+    );
+    return response.data;
   }
 
   async addComment(postId: number, content: string) {
-    try {
-      const response = await this.client.post(
-        `/community/posts/${postId}/comments/`,
-        {
-          content,
-        },
-      );
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await this.client.post(
+      `/community/posts/${postId}/comments/`,
+      { content },
+    );
+    return response.data;
   }
 
-  // ==================== PAYMENTS ENDPOINTS ====================
+  // ==================== PAYMENTS ====================
   async createPaymentIntent(plan: "monthly" | "annual") {
-    try {
-      const response = await this.client.post(
-        "/payments/create-payment-intent/",
-        {
-          plan,
-        },
-      );
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await this.client.post(
+      "/payments/create-payment-intent/",
+      { plan },
+    );
+    return response.data;
   }
 
   async getSubscriptionStatus() {
-    try {
-      const response = await this.client.get("/payments/subscription-status/");
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await this.client.get("/payments/subscription-status/");
+    return response.data;
   }
 
   async cancelSubscription() {
-    try {
-      const response = await this.client.post("/payments/cancel-subscription/");
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await this.client.post("/payments/cancel-subscription/");
+    return response.data;
   }
 
-  // ==================== AI SERVICE ENDPOINTS ====================
+  // ==================== AI ====================
   async chatWithAssistant(message: string) {
-    try {
-      const response = await this.client.post("/ai/chat/", { message });
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await this.client.post("/ai/chat/", { message });
+    return response.data;
   }
 
   async getChatHistory() {
-    try {
-      const response = await this.client.get("/ai/chat-history/");
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await this.client.get("/ai/chat-history/");
+    return response.data;
   }
 
   async detectDisease(formData: FormData) {
-    try {
-      const response = await this.client.post("/ai/detect-disease/", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await this.client.post("/ai/detect-disease/", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return response.data;
   }
 
   async getDiseaseHistory() {
-    try {
-      const response = await this.client.get("/ai/disease-history/");
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await this.client.get("/ai/disease-history/");
+    return response.data;
   }
 
   async predictYield(
@@ -293,86 +176,58 @@ class ApiService {
     rainfall: number,
     soilNitrogen: number,
   ) {
-    try {
-      const response = await this.client.post("/ai/predict-yield/", {
-        crop_type: cropType,
-        temperature,
-        rainfall,
-        soil_nitrogen: soilNitrogen,
-      });
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await this.client.post("/ai/predict-yield/", {
+      crop_type: cropType,
+      temperature,
+      rainfall,
+      soil_nitrogen: soilNitrogen,
+    });
+    return response.data;
   }
 
   async getYieldHistory() {
-    try {
-      const response = await this.client.get("/ai/yield-history/");
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await this.client.get("/ai/yield-history/");
+    return response.data;
   }
 
-  // ==================== FARM DATA ENDPOINTS ====================
+  // ==================== FARM ====================
+  async getLatestMarketReport() {
+    const response = await this.client.get("/farm/market-report/");
+    return response.data;
+  }
+
   async getCommodityPrices(commodityName?: string) {
-    try {
-      const response = await this.client.get("/farm/commodity-prices/", {
-        params: commodityName ? { commodity_name: commodityName } : {},
-      });
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await this.client.get("/farm/commodity-prices/", {
+      params: commodityName ? { commodity_name: commodityName } : {},
+    });
+    return response.data;
   }
 
   async getWeatherAdvisory() {
-    try {
-      const response = await this.client.get("/farm/weather-advisory/");
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await this.client.get("/farm/weather-advisory/");
+    return response.data;
   }
 
   async getNearbyMarkets(radius = 50) {
-    try {
-      const response = await this.client.get("/farm/nearby-markets/", {
-        params: { radius },
-      });
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await this.client.get("/farm/nearby-markets/", {
+      params: { radius },
+    });
+    return response.data;
   }
 
   async getCropRecommendations() {
-    try {
-      const response = await this.client.get("/farm/crop-recommendations/");
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await this.client.get("/farm/crop-recommendations/");
+    return response.data;
   }
 
-  // ==================== FARM DATA MANAGEMENT ====================
   async getFarmData() {
-    try {
-      const response = await this.client.get("/users/farm-data/");
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await this.client.get("/users/farm-data/");
+    return response.data;
   }
 
   async createFarmData(farmData: any) {
-    try {
-      const response = await this.client.post("/users/farm-data/", farmData);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await this.client.post("/users/farm-data/", farmData);
+    return response.data;
   }
 }
 

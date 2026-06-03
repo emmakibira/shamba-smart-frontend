@@ -14,6 +14,7 @@ import { AuthProvider, useAuth } from "../contexts/AuthContext";
 import { SubscriptionProvider } from "../contexts/SubscriptionContext";
 import { LanguageProvider } from "../contexts/LanguageContext";
 import { SessionProvider } from "../contexts/SessionContext";
+import { ThemeProvider as AppThemeProvider } from "../contexts/ThemeContext";
 
 import { useRouter, useSegments } from "expo-router";
 import { useEffect } from "react";
@@ -84,15 +85,17 @@ function RootLayoutNav() {
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <AuthProvider>
-        <SubscriptionProvider>
-          <LanguageProvider>
-            <SessionProvider>
-              <RootLayoutNav />
-            </SessionProvider>
-          </LanguageProvider>
-        </SubscriptionProvider>
-      </AuthProvider>
+      <AppThemeProvider>
+        <AuthProvider>
+          <SubscriptionProvider>
+            <LanguageProvider>
+              <SessionProvider>
+                <RootLayoutNav />
+              </SessionProvider>
+            </LanguageProvider>
+          </SubscriptionProvider>
+        </AuthProvider>
+      </AppThemeProvider>
     </GestureHandlerRootView>
   );
 }
