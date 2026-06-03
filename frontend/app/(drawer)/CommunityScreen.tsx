@@ -250,7 +250,7 @@ export default function CommunityScreen() {
     <View style={styles.container}>
       <LinearGradient
         colors={["#0F3D1E", "#2E7D32"] as [string, string]}
-        style={[styles.header, { paddingTop: insets.top + 10 }]}
+        style={[styles.header, { paddingTop:10 }]}
       >
         <Text style={styles.headerTitle}>Community</Text>
         <Text style={styles.headerSubtitle}>Connect with fellow farmers</Text>

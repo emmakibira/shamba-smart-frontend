@@ -1,36 +1,38 @@
 // src/screens/ProfileScreen.tsx
+import { db } from "@/services/firebase";
+import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
+import { doc, getDoc } from "firebase/firestore";
 import {
-    Award,
-    Bell,
-    Calendar,
-    ChevronRight,
-    CreditCard,
-    HelpCircle,
-    Leaf,
-    LogOut,
-    Settings,
-    Shield,
-    TrendingUp,
-    User,
-    Users,
+  Award,
+  Bell,
+  Calendar,
+  ChevronRight,
+  CreditCard,
+  HelpCircle,
+  Leaf,
+  LogOut,
+  Settings,
+  Shield,
+  TrendingUp,
+  User,
+  Users,
 } from "lucide-react-native";
 import React, { useState } from "react";
 import {
-    Alert,
-    Animated,
-    Image,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TouchableOpacity,
-    View
+  Alert,
+  Animated,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import * as ImagePicker from "expo-image-picker";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useSubscription } from "../../contexts/SubscriptionContext";
 import { useAuth } from "../../contexts/AuthContext";
+import { useSubscription } from "../../contexts/SubscriptionContext";
 
 interface MenuItem {
   id: string;
@@ -39,10 +41,26 @@ interface MenuItem {
   badge?: string;
   onPress: () => void;
 }
-
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
-  const { logout } = useAuth();
+  const { logout, user, appUser } = useAuth();
+  const [userProfile, setUserProfile] = useState<Record<string, unknown>>({});
+
+  React.useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (!user?.uid) return;
+      try {
+        const userRef = doc(db, "users", user.uid);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          setUserProfile(userSnap.data());
+        }
+      } catch (error) {
+        console.error("Error fetching user profile:", error);
+      }
+    };
+    fetchUserProfile();
+  }, [user]);
   const { isPremium, upgradeToPremium, communityPostsThisMonth } =
     useSubscription();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
@@ -149,10 +167,11 @@ export default function ProfileScreen() {
                   </View>
                 </LinearGradient>
               </TouchableOpacity>
-              <Text style={styles.userName}>Farmer John</Text>
-              <Text style={styles.userEmail}>john.farmer@example.com</Text>
+              <Text style={styles.userEmail}>
+                @{(userProfile.username as string) || appUser?.email?.split("@")[0] || "farmer"}
+              </Text>
               <View style={styles.locationBadge}>
-                <Text style={styles.locationText}>📍 Punjab, India</Text>
+                <Text style={styles.locationText}>📍Dar es salaam</Text>
               </View>
             </View>
           </LinearGradient>

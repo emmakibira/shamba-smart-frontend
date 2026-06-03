@@ -16,14 +16,21 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Eye, EyeOff, Leaf, Check } from 'lucide-react-native';
 
-import { createUserWithEmailAndPassword } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
-import { auth, db } from "@/services/firebase";
 import { useRouter } from "expo-router";
+import { useAuth, type RegisterParams } from "@/contexts/AuthContext";
+import {
+  validateAdminCode,
+  validateOfficerRegistrationCode,
+} from "@/utils/adminCodeValidator";
+import type { UserRole } from "@/types";
 
 export default function RegistrationScreen() {
   const router = useRouter();
+  const { register } = useAuth();
   const [name, setName] = useState('');
+  const [role, setRole] = useState<UserRole>('farmer');
+  const [adminCode, setAdminCode] = useState('');
+  const [regionId, setRegionId] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
@@ -62,18 +69,27 @@ export default function RegistrationScreen() {
       return;
     }
 
+    if (role === 'extension_officer' && !validateOfficerRegistrationCode(adminCode)) {
+      Alert.alert('Error', 'Invalid officer registration code');
+      return;
+    }
+    if (role === 'admin' && !validateAdminCode(adminCode)) {
+      Alert.alert('Error', 'Invalid admin registration code');
+      return;
+    }
+
     setLoading(true);
     
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      
-      // Save additional user data to Firestore
-      await setDoc(doc(db, "users", userCredential.user.uid), {
-        name,
+      const params: RegisterParams = {
         email,
+        password,
+        displayName: name,
         phone,
-        createdAt: new Date().toISOString(),
-      });
+        role,
+        regionId: regionId || undefined,
+      };
+      await register(params);
       
       setLoading(false);
       Alert.alert('Success', 'Account created successfully!');
@@ -136,6 +152,46 @@ export default function RegistrationScreen() {
                 autoCapitalize="none"
               />
             </View>
+
+            <View style={styles.roleRow}>
+              {(["farmer", "extension_officer", "admin"] as UserRole[]).map((r) => (
+                <TouchableOpacity
+                  key={r}
+                  style={[styles.roleChip, role === r && styles.roleChipActive]}
+                  onPress={() => setRole(r)}
+                >
+                  <Text style={[styles.roleChipText, role === r && styles.roleChipTextActive]}>
+                    {r === "farmer" ? "Farmer" : r === "extension_officer" ? "Officer" : "Admin"}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            {(role === "extension_officer" || role === "admin") && (
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Registration code</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Officer / admin code"
+                  placeholderTextColor="rgba(255,255,255,0.5)"
+                  value={adminCode}
+                  onChangeText={setAdminCode}
+                  secureTextEntry
+                />
+              </View>
+            )}
+            {role === "extension_officer" && (
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Region ID (e.g. dodoma)</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="dodoma"
+                  placeholderTextColor="rgba(255,255,255,0.5)"
+                  value={regionId}
+                  onChangeText={setRegionId}
+                  autoCapitalize="none"
+                />
+              </View>
+            )}
 
             <View style={styles.inputContainer}>
               <Text style={styles.label}>Phone Number</Text>
@@ -345,5 +401,30 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     fontWeight: 'bold',
+  },
+  roleRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 16,
+  },
+  roleChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.4)',
+  },
+  roleChipActive: {
+    backgroundColor: '#fff',
+    borderColor: '#fff',
+  },
+  roleChipText: {
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  roleChipTextActive: {
+    color: '#2E7D32',
   },
 });

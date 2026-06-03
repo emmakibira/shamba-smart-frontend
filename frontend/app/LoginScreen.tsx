@@ -1,6 +1,5 @@
 // src/screens/LoginScreen.tsx
-import apiService from "@/services/api";
-import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 import { auth, db } from "@/services/firebase";
 import { LinearGradient } from "expo-linear-gradient";
@@ -41,27 +40,29 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (!username || !password) {
-      Alert.alert("Error", "Please fill in all fields");
+      Alert.alert("Error", "Please fill in all fields / Jaza sehemu zote");
       return;
     }
 
     setLoading(true);
     try {
-      // In a real app we'd rename 'username' state to 'email', but handling it here for seamless transition
-      const emailToUse = username.includes('@') ? username : `${username}@shambasmart.com`;
-      await signInWithEmailAndPassword(auth, emailToUse, password);
-      Alert.alert("Success", "Login successful");
-      setLoading(false);
-      // login() is handled automatically by AuthContext's onAuthStateChanged listener
-      login();
-    } catch (error: any) {
-      setLoading(false);
-      let errorMessage = "Login failed. Please try again.";
-      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-        errorMessage = "Invalid email or password.";
+      const emailToUse = username.includes("@")
+        ? username
+        : `${username}@shambasmart.com`;
+      await login(emailToUse, password);
+    } catch (error: unknown) {
+      const err = error as { code?: string };
+      let errorMessage = "Login failed. / Kuingia kumeshindwa.";
+      if (
+        err.code === "auth/user-not-found" ||
+        err.code === "auth/wrong-password" ||
+        err.code === "auth/invalid-credential"
+      ) {
+        errorMessage = "Invalid email or password. / Barua pepe au nenosiri si sahihi.";
       }
       Alert.alert("Login Error", errorMessage);
-      console.error("Login error:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -82,7 +83,6 @@ export default function LoginScreen() {
         }, { merge: true });
 
         Alert.alert("Success", `Logged in as ${result.user.displayName}`);
-        login();
       } else {
         // Fallback for native
         Alert.alert(
@@ -138,10 +138,10 @@ export default function LoginScreen() {
             ]}
           >
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Username</Text>
+              <Text style={styles.label}>Email</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Enter your username"
+                placeholder="Enter your email"
                 placeholderTextColor="rgba(255,255,255,0.5)"
                 value={username}
                 onChangeText={setUsername}

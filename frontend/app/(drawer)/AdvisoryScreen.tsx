@@ -283,7 +283,7 @@ export default function AdvisoryScreen() {
       <Animated.View
         style={[
           styles.header,
-          { height: headerHeight, paddingTop: insets.top + 10 },
+          { height: headerHeight, paddingTop:0 },
         ]}
       >
         <LinearGradient

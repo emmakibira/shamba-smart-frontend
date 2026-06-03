@@ -24,3 +24,8 @@ GoogleService-Info.plist
 
 # Expo-cli
 expo-env.d.ts
+
+android
+ios
+node_modules
+../FILES_CHANGED.md

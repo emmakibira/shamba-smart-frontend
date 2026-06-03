@@ -187,7 +187,7 @@ export default function DashboardScreen() {
           style={[
             styles.header,
             {
-              paddingTop: insets.top + 10,
+              paddingTop:0,
             },
           ]}
         >
@@ -216,7 +216,7 @@ export default function DashboardScreen() {
         <View
           style={[
             styles.content,
-            { marginTop: -40, paddingBottom: insets.bottom + 20 },
+            { marginTop: 10, paddingBottom: insets.bottom + 20 },
           ]}
         >
           {/* Weather Card */}

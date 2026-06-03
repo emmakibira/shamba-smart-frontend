@@ -76,6 +76,14 @@ export default function DrawerLayout() {
           ),
         }}
       />
+      <Drawer.Screen
+        name="SensorScannerScreen"
+        options={{ drawerItemStyle: { display: "none" }, headerShown: true, title: "Sensors" }}
+      />
+      <Drawer.Screen
+        name="SensorPairingScreen"
+        options={{ drawerItemStyle: { display: "none" }, headerShown: true, title: "Pair Sensor" }}
+      />
     </Drawer>
   );
 }

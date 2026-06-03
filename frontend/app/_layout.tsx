@@ -12,12 +12,14 @@ import "react-native-reanimated";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { AuthProvider, useAuth } from "../contexts/AuthContext";
 import { SubscriptionProvider } from "../contexts/SubscriptionContext";
+import { LanguageProvider } from "../contexts/LanguageContext";
+import { SessionProvider } from "../contexts/SessionContext";
 
 import { useRouter, useSegments } from "expo-router";
 import { useEffect } from "react";
 
 function RootLayoutNav() {
-  const { hasCompletedOnboarding, isLoggedIn, loading } = useAuth();
+  const { hasCompletedOnboarding, isLoggedIn, loading, role } = useAuth();
   const colorScheme = useColorScheme();
   const segments = useSegments();
   const router = useRouter();
@@ -36,11 +38,14 @@ function RootLayoutNav() {
       if (currentRoute !== 'LoginScreen' && currentRoute !== 'RegistrationScreen') {
         router.replace('/LoginScreen');
       }
-    } else if (!isAuthRoute && currentRoute !== 'modal') {
-      // If logged in and completed onboarding, go to the main app area
-      router.replace('/(drawer)/MarketScreen');
+    } else if (role === "admin" && currentRoute !== "admin") {
+      router.replace("/admin/AdminDashboardScreen" as never);
+    } else if (role === "extension_officer" && currentRoute !== "officer") {
+      router.replace("/officer/OfficerDashboardScreen" as never);
+    } else if (!isAuthRoute && currentRoute !== "modal") {
+      router.replace("/(drawer)/DashboardScreen");
     }
-  }, [loading, hasCompletedOnboarding, isLoggedIn, segments]);
+  }, [loading, hasCompletedOnboarding, isLoggedIn, role, segments]);
 
   if (loading) {
     return (
@@ -68,6 +73,8 @@ function RootLayoutNav() {
           name="modal"
           options={{ presentation: "modal", title: "Modal" }}
         />
+        <Stack.Screen name="officer" options={{ headerShown: false }} />
+        <Stack.Screen name="admin" options={{ headerShown: false }} />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>
@@ -79,7 +86,11 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <AuthProvider>
         <SubscriptionProvider>
-          <RootLayoutNav />
+          <LanguageProvider>
+            <SessionProvider>
+              <RootLayoutNav />
+            </SessionProvider>
+          </LanguageProvider>
         </SubscriptionProvider>
       </AuthProvider>
     </GestureHandlerRootView>

@@ -1,0 +1,60 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    function isAdmin() {
+      return isSignedIn() && userDoc().role == 'admin';
+    }
+    function isOfficer() {
+      return isSignedIn() && userDoc().role == 'extension_officer';
+    }
+    function isFarmer() {
+      return isSignedIn() && userDoc().role == 'farmer';
+    }
+
+    match /users/{userId} {
+      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin() || isOfficer());
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow update: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    match /marketReports/{reportId} {
+      allow read: if isSignedIn();
+      allow write: if isOfficer() || isAdmin();
+    }
+
+    match /advisories/{advisoryId} {
+      allow read: if isSignedIn();
+      allow create, update: if isOfficer() || isAdmin();
+      allow delete: if isOfficer() || isAdmin();
+    }
+
+    match /communityPosts/{postId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn()
+        && (resource.data.authorId == request.auth.uid || isAdmin());
+    }
+
+    match /sensors/{sensorId} {
+      allow read, write: if isSignedIn()
+        && (resource == null || resource.data.ownerId == request.auth.uid || isAdmin());
+    }
+
+    match /sensorReadings/{readingId} {
+      allow read, write: if isSignedIn()
+        && request.resource.data.ownerId == request.auth.uid;
+    }
+
+    match /regions/{regionId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+  }
+}
