@@ -19,6 +19,8 @@ import { ThemeProvider as AppThemeProvider } from "../contexts/ThemeContext";
 import { useRouter, useSegments } from "expo-router";
 import { useEffect } from "react";
 
+import "./polyfills";
+
 function RootLayoutNav() {
   const { hasCompletedOnboarding, isLoggedIn, loading, role } = useAuth();
   const colorScheme = useColorScheme();

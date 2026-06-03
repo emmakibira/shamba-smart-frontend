@@ -1,9 +1,8 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import {
-  initializeAuth,
-  getReactNativePersistence,
-} from "firebase/auth";
+import { initializeAuth } from "firebase/auth";
+// @ts-ignore - getReactNativePersistence is only exported in React Native bundles
+import { getReactNativePersistence } from "firebase/auth";
 import { getFirestore } from 'firebase/firestore'; 
 
 // Configuration derived from your google-services.json

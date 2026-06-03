@@ -5,9 +5,11 @@ import { SymbolViewProps, SymbolWeight } from "expo-symbols";
 import { ComponentProps } from "react";
 import { OpaqueColorValue, type StyleProp, type TextStyle } from "react-native";
 
-type IconMapping = Record<
-  SymbolViewProps["name"],
-  ComponentProps<typeof MaterialIcons>["name"]
+type IconMapping = Partial<
+  Record<
+    SymbolViewProps["name"],
+    ComponentProps<typeof MaterialIcons>["name"]
+  >
 >;
 type IconSymbolName = keyof typeof MAPPING;
 
@@ -35,8 +37,8 @@ const MAPPING = {
   xmark: "close",
   "arrow.left": "arrow-back",
   "arrow.right": "arrow-forward",
-  "arrow.up": "arrow-up",
-  "arrow.down": "arrow-down",
+  "arrow.up": "arrow-upward",
+  "arrow.down": "arrow-downward",
   "heart.fill": "favorite",
   "star.fill": "star",
   "bell.fill": "notifications",

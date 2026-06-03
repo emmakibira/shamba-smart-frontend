@@ -93,19 +93,19 @@ export class LocationService {
   /**
    * Watch location changes (for real-time updates)
    */
-  static watchLocation(
+  static async watchLocation(
     callback: (location: Location.LocationObject) => void,
     errorCallback?: (error: Error) => void,
-  ): Location.LocationSubscription | null {
+  ): Promise<Location.LocationSubscription | null> {
     try {
-      return Location.watchPositionAsync(
+      return await Location.watchPositionAsync(
         {
           accuracy: Location.Accuracy.High,
           timeInterval: 5000, // Update every 5 seconds
           distanceInterval: 100, // Update when moved 100m
         },
         callback,
-      ).then((subscription) => subscription);
+      );
     } catch (error) {
       if (errorCallback) {
         errorCallback(error as Error);

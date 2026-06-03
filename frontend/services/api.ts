@@ -1,9 +1,23 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios, { AxiosInstance } from "axios";
-import { auth } from "./firebase";
 
-// API Configuration
-export const API_BASE_URL = "https://shamba-smart-backend.onrender.com/api";
+import Constants from "expo-constants";
+
+import { auth } from "@/services/firebase";
+
+// API Configuration: dynamically resolve local IP in development for physical device testing
+const getLocalBackendUrl = () => {
+  const hostUri = Constants.expoConfig?.hostUri; // e.g. "192.168.100.81:8081"
+  if (hostUri) {
+    const ip = hostUri.split(":")[0];
+    return `http://${ip}:8000/api`;
+  }
+  return "http://localhost:8000/api";
+};
+
+export const API_BASE_URL = __DEV__
+  ? getLocalBackendUrl()
+  : "https://shamba-smart-backend.onrender.com/api";
 
 console.log("API URL:", API_BASE_URL);
 
@@ -261,5 +275,47 @@ class ApiService {
     return response.data;
   }
 }
+
+// Add this at the bottom of your file, before the final export
+export const testConnection = async () => {
+  console.log('===========================');
+  console.log('🔍 TESTING API CONNECTION');
+  console.log('===========================');
+  console.log('API URL:', API_BASE_URL);
+  
+  try {
+    // Test 1: Basic connectivity using fetch
+    console.log('\n📡 Test 1: Basic fetch test...');
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    
+    const response = await fetch(`${API_BASE_URL.replace('/api', '')}/api/health/`, {
+      method: 'GET',
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    
+    console.log('✅ Backend responded! Status:', response.status);
+    const data = await response.json();
+    console.log('Response:', data);
+    return true;
+  } catch (error: any) {
+    console.log('❌ Connection failed');
+    console.log('Error:', error.message);
+    
+    if (error.name === 'AbortError') {
+      console.log('⏱️  Request timed out - Backend might be down');
+    } else if (error.message.includes('Network request failed')) {
+      console.log('🌐 Network error - Possible causes:');
+      console.log('  1. Django server not running');
+      console.log('  2. Wrong IP address');
+      console.log('  3. Phone not on same WiFi as computer');
+      console.log('  4. Firewall blocking connection');
+    }
+    return false;
+  }
+};
+
+// Export the API service instance as default
 
 export default new ApiService();

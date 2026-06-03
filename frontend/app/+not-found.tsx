@@ -53,7 +53,7 @@ export default function NotFoundScreen() {
         <View style={styles.buttonContainer}>
           <TouchableOpacity
             style={styles.primaryButton}
-            onPress={() => router.push("/(tabs)/DashboardScreen")}
+            onPress={() => router.push("/(drawer)/DashboardScreen")}
             activeOpacity={0.8}
           >
             <Home size={10} color="#fff" />

@@ -15,7 +15,8 @@
         "NSBluetoothPeripheralUsageDescription": "Connect to agricultural BLE sensors.",
         "NSLocationWhenInUseUsageDescription": "Location is required for Bluetooth scanning on iOS.",
         "NSCameraUsageDescription": "Take photos for community posts and advisories.",
-        "NSPhotoLibraryUsageDescription": "Attach images to posts and advisories."
+        "NSPhotoLibraryUsageDescription": "Attach images to posts and advisories.",
+        "ITSAppUsesNonExemptEncryption": false
       },
       "bundleIdentifier": "com.fyp.smart-farm"
     },
@@ -76,6 +77,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "7c7b82eb-829c-4630-8a6d-623463f2e125"
+      }
     }
   }
 }

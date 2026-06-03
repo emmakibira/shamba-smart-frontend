@@ -1,4 +1,5 @@
 // src/screens/DashboardScreen.tsx
+import { WeatherService } from "../../services/weatherService";
 import apiService from "@/services/api";
 import { LinearGradient } from "expo-linear-gradient";
 import {
@@ -12,6 +13,8 @@ import {
   TrendingUp,
   Wind,
   Zap,
+  Battery,
+  MapPin,
 } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -25,6 +28,9 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "../../contexts/AuthContext";
+import { useLanguage } from "../../contexts/LanguageContext";
+import { translate } from "../../constants/translations";
+import SensorService, { SensorDevice } from "../../services/sensors";
 
 const { width } = Dimensions.get("window");
 
@@ -33,6 +39,14 @@ interface WeatherData {
   humidity: number;
   windSpeed: number;
   rainfall: number;
+  condition: string;
+}
+
+interface DailyForecast {
+  date: string;
+  maxTemp: number;
+  minTemp: number;
+  precipitation: number;
   condition: string;
 }
 
@@ -61,6 +75,9 @@ const getDashIcon = (iconName: string, size: number, color: string) => {
 
 export default function DashboardScreen() {
   const { appUser } = useAuth();
+  const { language } = useLanguage();
+  const t = (key: Parameters<typeof translate>[0]) => translate(key, language);
+
   const insets = useSafeAreaInsets();
   const scrollY = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -68,6 +85,10 @@ export default function DashboardScreen() {
   const slideAnim2 = useRef(new Animated.Value(50)).current;
   const slideAnim3 = useRef(new Animated.Value(50)).current;
   const slideAnim4 = useRef(new Animated.Value(50)).current;
+  const slideAnim5 = useRef(new Animated.Value(50)).current;
+
+  const [sensors, setSensors] = useState<SensorDevice[]>([]);
+  const [currentTime, setCurrentTime] = useState(new Date());
 
   const [weatherData, setWeatherData] = useState<WeatherData>({
     temperature: 0,
@@ -77,6 +98,15 @@ export default function DashboardScreen() {
     condition: "Loading...",
   });
 
+  const [dailyForecast, setDailyForecast] = useState<DailyForecast[]>([]);
+  const [userLocation, setUserLocation] = useState({
+    latitude: -6.369028,
+    longitude: 34.888822,
+    address: "",
+    region: "",
+    country: "",
+  });
+
   const [cropRecommendations, setCropRecommendations] = useState<
     CropRecommendation[]
   >([
@@ -84,7 +114,7 @@ export default function DashboardScreen() {
       id: "1",
       name: "Rice",
       profit: "+32%",
-      season: "Kharif",
+      season: "Summer",
       icon: <Sprout size={32} color="#2E7D32" />,
       color: "#2E7D32",
       bgColor: "#C8E6C9",
@@ -93,7 +123,7 @@ export default function DashboardScreen() {
       id: "2",
       name: "Wheat",
       profit: "+28%",
-      season: "Rabi",
+      season: "Autumn",
       icon: <Leaf size={32} color="#8D6E63" />,
       color: "#8D6E63",
       bgColor: "#D7CCC8",
@@ -102,7 +132,7 @@ export default function DashboardScreen() {
       id: "3",
       name: "Corn",
       profit: "+25%",
-      season: "Summer",
+      season: "Spring",
       icon: <Zap size={32} color="#F57C00" />,
       color: "#F57C00",
       bgColor: "#FFE0B2",
@@ -110,8 +140,17 @@ export default function DashboardScreen() {
   ]);
 
   useEffect(() => {
-    fetchDashboardData();
-    fetchWeatherAdvisory();
+    // Extract user location from appUser data
+    extractUserLocation();
+    
+    // Fetch weather using user's location
+    fetchWeatherFromOpenMeteo();
+    
+    // Try to fetch from backend, but don't block weather display
+    fetchDashboardData().catch(err => {
+      console.log('Backend not available, using local data only');
+    });
+    
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -143,9 +182,82 @@ export default function DashboardScreen() {
           friction: 8,
           useNativeDriver: true,
         }),
+        Animated.spring(slideAnim5, {
+          toValue: 0,
+          tension: 40,
+          friction: 8,
+          useNativeDriver: true,
+        }),
       ]),
     ]).start();
+  }, [appUser]);
+
+  // Update time every minute
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60000);
+
+    return () => clearInterval(timer);
   }, []);
+
+  // Extract location from Firestore user document
+  const extractUserLocation = () => {
+    if (appUser?.location) {
+      const location = appUser.location;
+      setUserLocation({
+        latitude: location.latitude || -6.369028,
+        longitude: location.longitude || 34.888822,
+        address: location.address || "",
+        region: location.region || "",
+        country: location.country || "",
+      });
+      console.log('📍 User location extracted:', location);
+    } else if (appUser?.latitude && appUser?.longitude) {
+      // Fallback if location is directly on user object
+      setUserLocation({
+        latitude: appUser.latitude,
+        longitude: appUser.longitude,
+        address: appUser.address || "",
+        region: appUser.region || "",
+        country: appUser.country || "",
+      });
+    }
+  };
+
+  const fetchWeatherFromOpenMeteo = async () => {
+    try {
+      console.log('🌤️ Fetching weather for location:', userLocation);
+      
+      const weatherResponse = await WeatherService.getFarmWeather(
+        userLocation.latitude,
+        userLocation.longitude
+      );
+      
+      setWeatherData({
+        temperature: weatherResponse.temperature,
+        humidity: weatherResponse.humidity,
+        windSpeed: weatherResponse.windSpeed,
+        rainfall: weatherResponse.rainfall,
+        condition: weatherResponse.condition,
+      });
+
+      if (weatherResponse.dailyForecast) {
+        setDailyForecast(weatherResponse.dailyForecast);
+      }
+
+      console.log('✅ Weather updated from Open-Meteo:', weatherResponse.condition);
+    } catch (error) {
+      console.error("Error fetching weather from Open-Meteo:", error);
+      setWeatherData({
+        temperature: 25,
+        humidity: 65,
+        windSpeed: 12,
+        rainfall: 0,
+        condition: "Partly Cloudy",
+      });
+    }
+  };
 
   const fetchDashboardData = async () => {
     try {
@@ -165,84 +277,104 @@ export default function DashboardScreen() {
       }
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
-      // Use default data if API fails
+    }
+
+    try {
+      const sensorsData = await SensorService.getSensors();
+      setSensors(sensorsData);
+    } catch (sensorErr) {
+      console.error("Error fetching sensors for dashboard:", sensorErr);
     }
   };
-
-  const [, setCurrentTime] = useState(new Date());
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 60000);
-
-    return () => clearInterval(timer);
-  }, []);
 
   const getGreeting = () => {
-    const hour = new Date().getHours();
-
+    const hour = currentTime.getHours();
+    let greetingText = "";
+    
     if (hour < 12) {
-      return "Good Morning";
+      greetingText = t("greet.morning");
+    } else if (hour < 17) {
+      greetingText = t("greet.afternoon");
+    } else {
+      greetingText = t("greet.evening");
     }
-
-    if (hour < 17) {
-      return "Good Afternoon";
-    }
-
-    return "Good Evening";
+    
+    return greetingText;
   };
 
-  const getUserName = () => {
-    if (appUser?.displayName) {
+  // Updated to match Firestore document structure
+  const getUserDisplayName = () => {
+    // From your Firestore data, user has 'name' field
+    if (appUser?.name && appUser.name.trim() !== "") {
+      return appUser.name;
+    }
+    
+    // Check for display name (might be added later)
+    if (appUser?.displayName && appUser.displayName.trim() !== "") {
       return appUser.displayName;
     }
-
+    
+    // Check for first name
+    if (appUser?.firstName) {
+      return appUser.firstName;
+    }
+    
+    // Use email username part (from your data: "emmakibira001@gmail.com")
     if (appUser?.email) {
       return appUser.email.split("@")[0];
     }
-
-    return "Farmer";
-  };
-
-  const getWeatherCondition = (code: number) => {
-    const weatherCodes: Record<number, string> = {
-      0: "Clear Sky",
-      1: "Mainly Clear",
-      2: "Partly Cloudy",
-      3: "Overcast",
-      45: "Fog",
-      48: "Fog",
-      51: "Light Drizzle",
-      53: "Drizzle",
-      55: "Heavy Drizzle",
-      61: "Light Rain",
-      63: "Rain",
-      65: "Heavy Rain",
-      71: "Snow",
-      80: "Rain Showers",
-      81: "Rain Showers",
-      82: "Heavy Showers",
-      95: "Thunderstorm",
-    };
-
-    return weatherCodes[code] || "Unknown";
-  };
-
-  const fetchWeatherAdvisory = async () => {
-    try {
-      const response = await apiService.getWeatherAdvisory();
-
-      setWeatherData({
-        temperature: Math.round(response.temperature),
-        humidity: response.humidity,
-        windSpeed: Math.round(response.wind_speed),
-        rainfall: Math.round(response.rainfall),
-        condition: getWeatherCondition(response.weather_code ?? 0),
-      });
-    } catch (error) {
-      console.error("Error fetching weather advisory:", error);
+    
+    // Use phone number (from your data: "0655151889")
+    if (appUser?.phone) {
+      return appUser.phone;
     }
+    
+    if (appUser?.phoneNumber) {
+      return appUser.phoneNumber;
+    }
+    
+    // Fallback based on role
+    if (appUser?.role === "extension_officer") {
+      return t("role.officer");
+    }
+    
+    if (appUser?.role === "admin") {
+      return t("role.admin");
+    }
+    
+    return t("role.farmer");
+  };
+
+  // Get the user's role title
+  const getUserRoleTitle = () => {
+    if (appUser?.role === "extension_officer") {
+      return t("role.officer");
+    }
+    if (appUser?.role === "admin") {
+      return t("role.admin");
+    }
+    return t("role.farmer");
+  };
+
+  // Get user's location string
+  const getUserLocationString = () => {
+    const parts = [];
+    if (userLocation.address) parts.push(userLocation.address);
+    if (userLocation.region) parts.push(userLocation.region);
+    if (userLocation.country) parts.push(userLocation.country);
+    return parts.length > 0 ? parts.join(", ") : null;
+  };
+
+  // Get user's farm name or location
+  const getFarmName = () => {
+    if (appUser?.farmName) {
+      return appUser.farmName;
+    }
+    if (appUser?.farm?.name) {
+      return appUser.farm.name;
+    }
+    // Fallback to location
+    return getUserLocationString();
   };
 
   const getWeatherIcon = () => {
@@ -256,6 +388,18 @@ export default function DashboardScreen() {
       return <Cloud size={56} color="#FFFFFF" />;
     }
 
+    if (condition.includes("fog")) {
+      return <Cloud size={56} color="#B0BEC5" />;
+    }
+
+    if (condition.includes("snow")) {
+      return <Cloud size={56} color="#FFFFFF" />;
+    }
+
+    if (condition.includes("thunderstorm")) {
+      return <Cloud size={56} color="#FFD700" />;
+    }
+
     return <Sun size={56} color="#FFD700" />;
   };
 
@@ -265,8 +409,8 @@ export default function DashboardScreen() {
         style={[styles.scrollView, { opacity: fadeAnim }]}
         showsVerticalScrollIndicator={false}
         scrollEventThrottle={16}
-        contentContainerStyle={{ flexGrow: 1, backgroundColor: "#f8f9fa" }}
-      >
+        contentContainerStyle={{ flexGrow: 1, backgroundColor: "#f8f9fa" }}>
+       
         <View
           style={[
             styles.header,
@@ -281,9 +425,18 @@ export default function DashboardScreen() {
           >
             <View style={styles.headerContent}>
               <View>
-                <Text style={styles.greeting}>{getGreeting()},</Text>
-
-                <Text style={styles.userName}>{getUserName()}</Text>
+                <Text style={styles.greeting}>
+                  {getGreeting()}, {getUserRoleTitle()}!
+                </Text>
+                <Text style={styles.userName}>{getUserDisplayName()}</Text>
+                {getFarmName() && (
+                  <View style={styles.locationContainer}>
+                    <MapPin size={12} color="rgba(255,255,255,0.7)" />
+                    <Text style={styles.farmName}>
+                      {getFarmName()}
+                    </Text>
+                  </View>
+                )}
               </View>
               <TouchableOpacity
                 style={styles.notificationButton}
@@ -318,7 +471,17 @@ export default function DashboardScreen() {
               end={{ x: 1, y: 1 }}
             >
               <View style={styles.weatherHeader}>
-                <Text style={styles.weatherTitle}>Current Weather</Text>
+                <View>
+                  <Text style={styles.weatherTitle}>{t("dash.currentWeather")}</Text>
+                  {(userLocation.region || userLocation.country) && (
+                    <View style={styles.weatherLocationContainer}>
+                      <MapPin size={12} color="rgba(255,255,255,0.7)" />
+                      <Text style={styles.weatherLocation}>
+                        {userLocation.region}, {userLocation.country}
+                      </Text>
+                    </View>
+                  )}
+                </View>
                 <Text style={styles.weatherCondition}>
                   {weatherData.condition}
                 </Text>
@@ -337,7 +500,7 @@ export default function DashboardScreen() {
                 <View style={styles.statItem}>
                   <Droplets size={20} color="#81C784" />
                   <Text style={styles.statValue}>{weatherData.humidity}%</Text>
-                  <Text style={styles.statLabel}>Humidity</Text>
+                  <Text style={styles.statLabel}>{t("dash.humidity")}</Text>
                 </View>
                 <View style={styles.statDivider} />
                 <View style={styles.statItem}>
@@ -345,7 +508,7 @@ export default function DashboardScreen() {
                   <Text style={styles.statValue}>
                     {weatherData.windSpeed} km/h
                   </Text>
-                  <Text style={styles.statLabel}>Wind Speed</Text>
+                  <Text style={styles.statLabel}>{t("dash.windSpeed")}</Text>
                 </View>
                 <View style={styles.statDivider} />
                 <View style={styles.statItem}>
@@ -353,9 +516,40 @@ export default function DashboardScreen() {
                   <Text style={styles.statValue}>
                     {weatherData.rainfall} mm
                   </Text>
-                  <Text style={styles.statLabel}>Rainfall</Text>
+                  <Text style={styles.statLabel}>{t("dash.rainfall")}</Text>
                 </View>
               </View>
+
+              {/* Daily Forecast Section */}
+              {dailyForecast.length > 0 && (
+                <View style={styles.dailyForecastContainer}>
+                  <Text style={styles.forecastTitle}>7-Day Forecast</Text>
+                  <ScrollView 
+                    horizontal 
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.forecastScroll}
+                  >
+                    {dailyForecast.map((day: DailyForecast, index: number) => (
+                      <View key={index} style={styles.forecastDay}>
+                        <Text style={styles.forecastDate}>{day.date}</Text>
+                        <Text style={styles.forecastTemp}>{day.maxTemp}°</Text>
+                        <Text style={styles.forecastMinTemp}>{day.minTemp}°</Text>
+                        <Text style={styles.forecastCondition}>
+                          {day.condition.length > 10 
+                            ? day.condition.substring(0, 10) + '...' 
+                            : day.condition}
+                        </Text>
+                        {day.precipitation > 0 && (
+                          <View style={styles.rainIndicator}>
+                            <Droplets size={12} color="#81D4FA" />
+                            <Text style={styles.rainText}>{day.precipitation}mm</Text>
+                          </View>
+                        )}
+                      </View>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
             </LinearGradient>
           </Animated.View>
 
@@ -366,7 +560,7 @@ export default function DashboardScreen() {
               { opacity: fadeAnim, transform: [{ translateY: slideAnim2 }] },
             ]}
           >
-            <Text style={styles.sectionTitle}>Quick Actions</Text>
+            <Text style={styles.sectionTitle}>{t("dash.quickActions")}</Text>
             <View style={styles.quickActionsContainer}>
               <TouchableOpacity
                 style={styles.quickActionButton}
@@ -377,7 +571,7 @@ export default function DashboardScreen() {
                   style={styles.quickActionGradient}
                 >
                   <Leaf size={24} color="#fff" />
-                  <Text style={styles.quickActionText}>Scan Crop</Text>
+                  <Text style={styles.quickActionText}>{t("dash.scanCrop")}</Text>
                 </LinearGradient>
               </TouchableOpacity>
               <TouchableOpacity
@@ -389,7 +583,7 @@ export default function DashboardScreen() {
                   style={styles.quickActionGradient}
                 >
                   <TrendingUp size={24} color="#fff" />
-                  <Text style={styles.quickActionText}>Market Prices</Text>
+                  <Text style={styles.quickActionText}>{t("dash.marketPrices")}</Text>
                 </LinearGradient>
               </TouchableOpacity>
               <TouchableOpacity
@@ -401,10 +595,70 @@ export default function DashboardScreen() {
                   style={styles.quickActionGradient}
                 >
                   <Sun size={24} color="#fff" />
-                  <Text style={styles.quickActionText}>Weather Alert</Text>
+                  <Text style={styles.quickActionText}>{t("dash.weatherAlert")}</Text>
                 </LinearGradient>
               </TouchableOpacity>
             </View>
+          </Animated.View>
+
+          {/* Sensors Section */}
+          <Animated.View
+            style={[
+              styles.section,
+              { opacity: fadeAnim, transform: [{ translateY: slideAnim5 }] },
+            ]}
+          >
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>{t("dash.mySensors")}</Text>
+              <TouchableOpacity activeOpacity={0.6}>
+                <Text style={styles.seeAllText}>{t("dash.seeAll")}</Text>
+              </TouchableOpacity>
+            </View>
+            {sensors.length > 0 ? (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.sensorsScroll}
+              >
+                {sensors.map((sensor) => (
+                  <View key={sensor.id} style={styles.sensorCard}>
+                    <View style={styles.sensorCardHeader}>
+                      <View style={styles.sensorTypeIconContainer}>
+                        {sensor.sensor_type === "soil_moisture" ? (
+                          <Droplets size={20} color="#2E7D32" />
+                        ) : sensor.sensor_type === "temperature" ? (
+                          <Thermometer size={20} color="#F57C00" />
+                        ) : (
+                          <Sprout size={20} color="#1565C0" />
+                        )}
+                      </View>
+                      <View style={styles.batteryContainer}>
+                        <Battery size={14} color="#666" />
+                        <Text style={styles.batteryText}>{sensor.battery_level}%</Text>
+                      </View>
+                    </View>
+                    <Text style={styles.sensorName} numberOfLines={1}>{sensor.name}</Text>
+                    <Text style={styles.sensorLocation}>{sensor.location_name}</Text>
+                    <View style={styles.sensorReadingContainer}>
+                      <Text style={styles.sensorReadingValue}>
+                        {sensor.latest_reading?.value !== undefined
+                          ? `${sensor.latest_reading.value}`
+                          : "--"}
+                      </Text>
+                      <Text style={styles.sensorReadingUnit}>{sensor.unit}</Text>
+                    </View>
+                    <View style={styles.sensorStatusBadge}>
+                      <View style={[styles.statusDot, { backgroundColor: sensor.status === "active" ? "#4CAF50" : "#9E9E9E" }]} />
+                      <Text style={styles.statusText}>{sensor.status.toUpperCase()}</Text>
+                    </View>
+                  </View>
+                ))}
+              </ScrollView>
+            ) : (
+              <View style={styles.emptySensorsContainer}>
+                <Text style={styles.emptySensorsText}>{t("dash.noSensors")}</Text>
+              </View>
+            )}
           </Animated.View>
 
           {/* Crop Health Status */}
@@ -414,7 +668,7 @@ export default function DashboardScreen() {
               { opacity: fadeAnim, transform: [{ translateY: slideAnim3 }] },
             ]}
           >
-            <Text style={styles.sectionTitle}>Crop Health Status</Text>
+            <Text style={styles.sectionTitle}>{t("dash.cropHealth")}</Text>
             <View style={styles.healthCard}>
               <View style={styles.healthBarContainer}>
                 <View style={styles.healthLabel}>
@@ -464,9 +718,9 @@ export default function DashboardScreen() {
           {/* AI Crop Recommendations */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>AI Recommendations</Text>
+              <Text style={styles.sectionTitle}>{t("dash.aiRecs")}</Text>
               <TouchableOpacity activeOpacity={0.6}>
-                <Text style={styles.seeAllText}>See All</Text>
+                <Text style={styles.seeAllText}>{t("dash.seeAll")}</Text>
               </TouchableOpacity>
             </View>
             <ScrollView
@@ -493,10 +747,8 @@ export default function DashboardScreen() {
                   ]}
                 >
                   <LinearGradient
-                    colors={["#f8f9fa", "#fff"]}
+                    colors={[crop.bgColor || "#E8F5E9", "#FFFFFF"]}
                     style={styles.recommendationGradient}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
                   >
                     <View style={styles.cropIconContainer}>{crop.icon}</View>
                     <Text style={styles.cropNameLarge}>{crop.name}</Text>
@@ -504,7 +756,7 @@ export default function DashboardScreen() {
                       <TrendingUp size={14} color="#2E7D32" />
                       <Text style={styles.profitText}>{crop.profit}</Text>
                     </View>
-                    <Text style={styles.seasonText}>{crop.season} Season</Text>
+                    <Text style={styles.seasonText}>{t("dash.season")} {crop.season}</Text>
                   </LinearGradient>
                 </Animated.View>
               ))}
@@ -544,6 +796,17 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#fff",
     marginTop: 4,
+  },
+  locationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+    gap: 4,
+  },
+  farmName: {
+    fontSize: 12,
+    color: "rgba(255,255,255,0.7)",
+    fontWeight: "500",
   },
   notificationButton: {
     position: "relative",
@@ -590,13 +853,23 @@ const styles = StyleSheet.create({
   weatherHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: "flex-start",
     marginBottom: 20,
   },
   weatherTitle: {
     fontSize: 18,
     fontWeight: "600",
     color: "#fff",
+  },
+  weatherLocationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+    gap: 4,
+  },
+  weatherLocation: {
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.7)',
   },
   weatherCondition: {
     fontSize: 14,
@@ -648,6 +921,69 @@ const styles = StyleSheet.create({
   statDivider: {
     width: 1,
     backgroundColor: "rgba(255,255,255,0.2)",
+  },
+  // Daily Forecast Styles
+  dailyForecastContainer: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 16,
+    padding: 16,
+    marginTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.1)',
+  },
+  forecastTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#fff',
+    marginBottom: 12,
+  },
+  forecastScroll: {
+    marginHorizontal: -8,
+  },
+  forecastDay: {
+    alignItems: 'center',
+    marginRight: 24,
+    minWidth: 80,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 12,
+    padding: 10,
+  },
+  forecastDate: {
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.7)',
+    marginBottom: 6,
+    fontWeight: '500',
+  },
+  forecastTemp: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  forecastMinTemp: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.6)',
+    marginBottom: 6,
+  },
+  forecastCondition: {
+    fontSize: 9,
+    color: 'rgba(255,255,255,0.7)',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  rainIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+    gap: 2,
+    backgroundColor: 'rgba(33, 150, 243, 0.2)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  rainText: {
+    fontSize: 10,
+    color: '#81D4FA',
+    fontWeight: '600',
   },
   section: {
     marginBottom: 32,
@@ -794,5 +1130,94 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#666",
     fontWeight: "500",
+  },
+  sensorsScroll: {
+    marginHorizontal: -20,
+    paddingHorizontal: 20,
+  },
+  sensorCard: {
+    width: 160,
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 12,
+    marginRight: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  sensorCardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  sensorTypeIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: "#f0f0f0",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  batteryContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  batteryText: {
+    fontSize: 10,
+    color: "#666",
+  },
+  sensorName: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#333",
+    marginBottom: 4,
+  },
+  sensorLocation: {
+    fontSize: 10,
+    color: "#999",
+    marginBottom: 8,
+  },
+  sensorReadingContainer: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    marginBottom: 8,
+  },
+  sensorReadingValue: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#2E7D32",
+  },
+  sensorReadingUnit: {
+    fontSize: 12,
+    color: "#666",
+    marginLeft: 2,
+  },
+  sensorStatusBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  statusText: {
+    fontSize: 10,
+    color: "#666",
+  },
+  emptySensorsContainer: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 24,
+    alignItems: "center",
+  },
+  emptySensorsText: {
+    fontSize: 14,
+    color: "#999",
   },
 });

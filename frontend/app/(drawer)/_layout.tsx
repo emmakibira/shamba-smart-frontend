@@ -7,7 +7,7 @@ import CustomDrawerContent from "@/components/CustomDrawerContent";
 
 export default function DrawerLayout() {
   const colorScheme = useColorScheme();
-  const themeColors = Colors[colorScheme ?? "light"];
+  const themeColors = Colors[(colorScheme ?? "light") as 'light' | 'dark'];
 
   return (
     <Drawer

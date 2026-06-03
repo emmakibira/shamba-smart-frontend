@@ -41,7 +41,29 @@ export type TranslationKey =
   | "common.retry"
   | "common.save"
   | "common.cancel"
-  | "language.toggle";
+  | "language.toggle"
+  | "greet.morning"
+  | "greet.afternoon"
+  | "greet.evening"
+  | "role.farmer"
+  | "role.officer"
+  | "role.admin"
+  | "dash.currentWeather"
+  | "dash.humidity"
+  | "dash.windSpeed"
+  | "dash.rainfall"
+  | "dash.quickActions"
+  | "dash.scanCrop"
+  | "dash.marketPrices"
+  | "dash.weatherAlert"
+  | "dash.cropHealth"
+  | "dash.aiRecs"
+  | "dash.seeAll"
+  | "dash.mySensors"
+  | "dash.battery"
+  | "dash.lastReading"
+  | "dash.noSensors"
+  | "dash.season";
 
 const strings: Record<TranslationKey, Record<LanguageCode, string>> = {
   "app.name": { sw: "Shamba Smart", en: "Shamba Smart" },
@@ -97,6 +119,28 @@ const strings: Record<TranslationKey, Record<LanguageCode, string>> = {
   "common.save": { sw: "Hifadhi", en: "Save" },
   "common.cancel": { sw: "Ghairi", en: "Cancel" },
   "language.toggle": { sw: "English", en: "Kiswahili" },
+  "greet.morning": { sw: "Habari za Asubuhi", en: "Good Morning" },
+  "greet.afternoon": { sw: "Habari za Mchana", en: "Good Afternoon" },
+  "greet.evening": { sw: "Habari za Jioni", en: "Good Evening" },
+  "role.farmer": { sw: "Mkulima", en: "Farmer" },
+  "role.officer": { sw: "Afisa", en: "Officer" },
+  "role.admin": { sw: "Msimamizi", en: "Admin" },
+  "dash.currentWeather": { sw: "Hali ya Hewa ya Sasa", en: "Current Weather" },
+  "dash.humidity": { sw: "Unyevunyevu", en: "Humidity" },
+  "dash.windSpeed": { sw: "Kasi ya Upepo", en: "Wind Speed" },
+  "dash.rainfall": { sw: "Mvua", en: "Rainfall" },
+  "dash.quickActions": { sw: "Hatua za Haraka", en: "Quick Actions" },
+  "dash.scanCrop": { sw: "Kagua Zao", en: "Scan Crop" },
+  "dash.marketPrices": { sw: "Bei za Masoko", en: "Market Prices" },
+  "dash.weatherAlert": { sw: "Tahadhari ya Hewa", en: "Weather Alert" },
+  "dash.cropHealth": { sw: "Afya ya Mazao", en: "Crop Health Status" },
+  "dash.aiRecs": { sw: "Ushauri wa AI", en: "AI Recommendations" },
+  "dash.seeAll": { sw: "Ona Zote", en: "See All" },
+  "dash.mySensors": { sw: "Vihisio Vyangu", en: "My Sensors" },
+  "dash.battery": { sw: "Betri", en: "Battery" },
+  "dash.lastReading": { sw: "Kipimo cha Mwisho", en: "Last Reading" },
+  "dash.noSensors": { sw: "Hakuna vihisio vilivyopatikana", en: "No sensors found" },
+  "dash.season": { sw: "Msimu wa", en: "Season" },
 };
 
 export function translate(key: TranslationKey, lang: LanguageCode): string {
